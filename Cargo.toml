@@ -9,3 +9,5 @@ edition = "2021"
 ff = "0.13"
 group = "0.13"
 halo2_proofs = { git = "https://github.com/scroll-tech/halo2.git", branch = "main" }
+halo2_gadgets = { git = "https://github.com/scroll-tech/halo2.git", branch = "main" }
+# halo2wrong = { git = "https://github.com/scroll-tech/halo2wrong.git", branch = "master" }
