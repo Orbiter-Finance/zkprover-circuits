@@ -12,4 +12,4 @@ halo2_proofs = { git = "https://github.com/scroll-tech/halo2.git", branch = "mai
 halo2_gadgets = { git = "https://github.com/scroll-tech/halo2.git", branch = "main" }
 rand = "0.8.5"
 chrono = "0.4.23"
-# halo2wrong = { git = "https://github.com/scroll-tech/halo2wrong.git", branch = "master" }
+halo2wrong = { git = "https://github.com/scroll-tech/halo2wrong.git", branch = "master" }
