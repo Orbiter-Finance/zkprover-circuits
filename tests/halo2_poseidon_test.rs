@@ -1,16 +1,31 @@
 use std::marker::PhantomData;
 
 use halo2_gadgets::poseidon::{
-    primitives::{ConstantLength, Spec},
+    primitives::{self as poseidon, ConstantLength, Spec},
     Hash, Pow5Chip, Pow5Config,
 };
 use halo2_proofs::{
     arithmetic::Field,
     circuit::{Layouter, SimpleFloorPlanner, Value},
-    halo2curves::pasta::{vesta, Fp},
-    plonk::{keygen_pk, keygen_vk, Advice, Circuit, Column, ConstraintSystem, Error},
-    poly::{commitment::ParamsProver, ipa::commitment::ParamsIPA},
+    halo2curves::pasta::{pallas, vesta, EqAffine, Fp},
+    plonk::{
+        create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column,
+        ConstraintSystem, Error,
+    },
+    poly::{
+        commitment::ParamsProver,
+        ipa::{
+            commitment::{IPACommitmentScheme, ParamsIPA},
+            multiopen::ProverIPA,
+            strategy::SingleStrategy,
+        },
+        VerificationStrategy,
+    },
+    transcript::{
+        Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
+    },
 };
+use rand::rngs::OsRng;
 
 #[derive(Debug, Clone, Copy)]
 struct MySpec<const WIDTH: usize, const RATE: usize>;
@@ -146,5 +161,43 @@ fn halo2_poseidon_test() {
     let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
     let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
 
-    println!("Test, halo2_poseidon_test.");
+    let mut rng = OsRng;
+    let message = (0..2)
+        .map(|_| pallas::Base::random(rng))
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
+    let output = poseidon::Hash::<_, MySpec<3, 2>, ConstantLength<2>, 3, 2>::init().hash(message);
+
+    let circuit = HashCircuit::<MySpec<3, 2>, 3, 2, 2> {
+        message: Value::known(message),
+        output: Value::known(output),
+        _spec: PhantomData,
+    };
+
+    use chrono::Utc;
+    let now = Utc::now().timestamp_millis();
+
+    // Create a proof
+    let mut transcript = Blake2bWrite::<_, EqAffine, Challenge255<_>>::init(vec![]);
+    create_proof::<IPACommitmentScheme<_>, ProverIPA<_>, _, _, _, _>(
+        &params,
+        &pk,
+        &[circuit],
+        &[&[]],
+        &mut rng,
+        &mut transcript,
+    )
+    .expect("proof generation should not fail");
+
+    println!(
+        "Create_proof time used: {}",
+        Utc::now().timestamp_millis() - now
+    );
+
+    let proof = transcript.finalize();
+
+    let strategy = SingleStrategy::new(&params);
+    let mut v_transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+    assert!(verify_proof(&params, pk.get_vk(), strategy, &[&[]], &mut v_transcript).is_ok());
 }
