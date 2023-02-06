@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, vec};
 
 use halo2_gadgets::poseidon::{
     primitives::{self as poseidon, ConstantLength, Spec},
@@ -30,7 +30,7 @@ use rand::rngs::OsRng;
 #[derive(Debug, Clone, Copy)]
 struct MySpec<const WIDTH: usize, const RATE: usize>;
 
-impl Spec<Fp, 12, 11> for MySpec<12, 11> {
+impl Spec<Fp, 3, 2> for MySpec<3, 2> {
     fn full_rounds() -> usize {
         8
     }
@@ -151,7 +151,7 @@ fn halo2_poseidon_test() {
     // Initialize the polynomial commitment parameters
     let params: ParamsIPA<vesta::Affine> = ParamsIPA::new(K);
 
-    let empty_circuit = HashCircuit::<MySpec<12, 11>, 12, 11, 11> {
+    let empty_circuit = HashCircuit::<MySpec<3, 2>, 3, 2, 2> {
         message: Value::unknown(),
         output: Value::unknown(),
         _spec: PhantomData,
@@ -162,15 +162,10 @@ fn halo2_poseidon_test() {
     let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
 
     let mut rng = OsRng;
-    let message = (0..11)
-        .map(|_| pallas::Base::random(rng))
-        .collect::<Vec<_>>()
-        .try_into()
-        .unwrap();
-    let output =
-        poseidon::Hash::<_, MySpec<12, 11>, ConstantLength<11>, 12, 11>::init().hash(message);
+    let message = [1, 2].map(|i| pallas::Base::from(i)).try_into().unwrap();
+    let output = poseidon::Hash::<_, MySpec<3, 2>, ConstantLength<2>, 3, 2>::init().hash(message);
 
-    let circuit = HashCircuit::<MySpec<12, 11>, 12, 11, 11> {
+    let circuit = HashCircuit::<MySpec<3, 2>, 3, 2, 2> {
         message: Value::known(message),
         output: Value::known(output),
         _spec: PhantomData,
