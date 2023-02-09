@@ -1,4 +1,7 @@
 fn main() {
     let name = "zkprover";
-    println!("Hello, {}!", name);
+
+    let output = format!("Hello, {}!", name);
+
+    println!("{}", output);
 }
