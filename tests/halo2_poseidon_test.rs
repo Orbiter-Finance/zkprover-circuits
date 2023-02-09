@@ -30,7 +30,7 @@ use rand::rngs::OsRng;
 #[derive(Debug, Clone, Copy)]
 struct MySpec<const WIDTH: usize, const RATE: usize>;
 
-impl Spec<Fp, 3, 2> for MySpec<3, 2> {
+impl<const WIDTH: usize, const RATE: usize> Spec<Fp, WIDTH, RATE> for MySpec<WIDTH, RATE> {
     fn full_rounds() -> usize {
         8
     }
@@ -147,11 +147,13 @@ where
 #[test]
 fn halo2_poseidon_test() {
     const K: u32 = 6;
+    const WIDTH: usize = 5;
+    const RATE: usize = 4;
 
     // Initialize the polynomial commitment parameters
     let params: ParamsIPA<vesta::Affine> = ParamsIPA::new(K);
 
-    let empty_circuit = HashCircuit::<MySpec<3, 2>, 3, 2, 2> {
+    let empty_circuit = HashCircuit::<MySpec<WIDTH, RATE>, WIDTH, RATE, RATE> {
         message: Value::unknown(),
         output: Value::unknown(),
         _spec: PhantomData,
@@ -162,14 +164,32 @@ fn halo2_poseidon_test() {
     let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
 
     let mut rng = OsRng;
-    let message = [1, 2].map(|i| pallas::Base::from(i)).try_into().unwrap();
-    let output = poseidon::Hash::<_, MySpec<3, 2>, ConstantLength<2>, 3, 2>::init().hash(message);
+    // let message: [Fp; RATE] = [1, 2].map(|i|
+    // pallas::Base::from(i)).try_into().unwrap();
+    let message: [Fp; RATE] = [
+        pallas::Base::from(1),
+        pallas::Base::from(2),
+        pallas::Base::from(0),
+        pallas::Base::from(0),
+    ];
+    let output =
+        poseidon::Hash::<_, MySpec<WIDTH, RATE>, ConstantLength<RATE>, WIDTH, RATE>::init()
+            .hash(message);
 
-    let circuit = HashCircuit::<MySpec<3, 2>, 3, 2, 2> {
+    let circuit = HashCircuit::<MySpec<WIDTH, RATE>, WIDTH, RATE, RATE> {
         message: Value::known(message),
         output: Value::known(output),
         _spec: PhantomData,
     };
+
+    use plotters::prelude::*;
+    let root = BitMapBackend::new("poseidon-1—layout.png", (1024, 7680)).into_drawing_area();
+    root.fill(&WHITE).unwrap();
+    let root1 = root.titled("Fib 1 Layout", ("sans—serif", 60)).unwrap();
+
+    halo2_proofs::dev::CircuitLayout::default()
+        .render(6, &circuit, &root1)
+        .unwrap();
 
     use chrono::Utc;
     let now = Utc::now().timestamp_millis();
