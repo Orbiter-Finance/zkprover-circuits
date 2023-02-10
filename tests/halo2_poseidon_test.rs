@@ -183,12 +183,14 @@ fn halo2_poseidon_test() {
     };
 
     use plotters::prelude::*;
-    let root = BitMapBackend::new("poseidon-1—layout.png", (1024, 7680)).into_drawing_area();
+    let root = SVGBackend::new("halo2_poseidon_test—layout.svg", (1024, 768)).into_drawing_area();
     root.fill(&WHITE).unwrap();
-    let root1 = root.titled("Fib 1 Layout", ("sans—serif", 60)).unwrap();
-
+    let root1 = root
+        .titled("halo2_poseidon_test-layout", ("sans—serif", 60))
+        .unwrap();
     halo2_proofs::dev::CircuitLayout::default()
-        .render(6, &circuit, &root1)
+        .show_equality_constraints(true)
+        .render(K, &circuit, &root1)
         .unwrap();
 
     use chrono::Utc;

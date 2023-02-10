@@ -310,7 +310,7 @@ fn halo2_simple_test() {
     // ANCHOR: test-circuit
     // The number of rows in our circuit cannot exceed 2^k. Since our example
     // circuit is very small, we can pick a very small value here.
-    let k = 4;
+    let k = 5;
 
     // Prepare the private and public inputs to the circuit!
     let constant = Fp::from(7);
@@ -324,6 +324,17 @@ fn halo2_simple_test() {
         a: Value::known(a),
         b: Value::known(b),
     };
+
+    use plotters::prelude::*;
+    let root = SVGBackend::new("halo2_simple_test—layout.svg", (1024, 768)).into_drawing_area();
+    root.fill(&WHITE).unwrap();
+    let root1 = root
+        .titled("halo2_simple_test—layout", ("sans—serif", 60))
+        .unwrap();
+    halo2_proofs::dev::CircuitLayout::default()
+        .show_equality_constraints(true)
+        .render(k, &circuit, &root1)
+        .unwrap();
 
     // Arrange the public input. We expose the multiplication result in row 0
     // of the instance column, so we position it there in our public inputs.
