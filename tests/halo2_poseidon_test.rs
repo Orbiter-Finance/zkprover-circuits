@@ -7,7 +7,10 @@ use halo2_gadgets::poseidon::{
 use halo2_proofs::{
     arithmetic::Field,
     circuit::{Layouter, SimpleFloorPlanner, Value},
-    halo2curves::pasta::{pallas, vesta, EqAffine, Fp},
+    halo2curves::{
+        group::ff::PrimeField,
+        pasta::{pallas, vesta, EqAffine, Fp},
+    },
     plonk::{
         create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column,
         ConstraintSystem, Error,
@@ -168,8 +171,8 @@ fn halo2_poseidon_test() {
     // pallas::Base::from(i)).try_into().unwrap();
     let message: [Fp; RATE] = [
         pallas::Base::from(1),
+        pallas::Base::from_str_vartime("2").unwrap(),
         pallas::Base::from(2),
-        pallas::Base::from(0),
         pallas::Base::from(0),
     ];
     let output =

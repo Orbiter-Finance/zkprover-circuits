@@ -190,8 +190,11 @@ fn get_fibo_seq(a: u64, b: u64, num: usize) -> Vec<u64> {
 fn halo2_fibo_test() {
     use halo2_proofs::{dev::MockProver, halo2curves::pasta::Fp};
 
+    // Set circuit size
+    let k = 6;
+
     // Prepare the private and public inputs to the circuit!
-    let num = 64;
+    let num = 60;
     let seq = get_fibo_seq(1, 1, num);
     let res = Fp::from(seq[num - 1]);
     println!("{:?}", seq);
@@ -203,12 +206,19 @@ fn halo2_fibo_test() {
         num,
     };
 
+    use plotters::prelude::*;
+    let root = SVGBackend::new("halo2_fibo_test—layout.svg", (1024, 768)).into_drawing_area();
+    root.fill(&WHITE).unwrap();
+    let root1 = root
+        .titled("halo2_fibo_test—layout", ("sans—serif", 60))
+        .unwrap();
+    halo2_proofs::dev::CircuitLayout::default()
+        .render(k, &circuit, &root1)
+        .unwrap();
+
     // Arrange the public input. We expose the multiplication result in row 0
     // of the instance column, so we position it there in our public inputs.
     let mut public_inputs = vec![res];
-
-    // Set circuit size
-    let k = 8;
 
     // Given the correct public input, our circuit will verify.
     let prover = MockProver::run(k, &circuit, vec![public_inputs.clone()]).unwrap();
