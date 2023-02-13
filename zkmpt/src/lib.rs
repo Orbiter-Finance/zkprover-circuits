@@ -56,14 +56,15 @@ pub enum HashType {
     Middle,
     /// leaf node which is extended to middle in insert
     LeafExt,
-    /// leaf node which is extended to middle in insert, which is the last node in new path
+    /// leaf node which is extended to middle in insert, which is the last node
+    /// in new path
     LeafExtFinal,
     /// leaf node
     Leaf,
 }
 
-// we lookup the transition of ctrl type from the preset table, and different kind of rules
-// is specified here
+// we lookup the transition of ctrl type from the preset table, and different
+// kind of rules is specified here
 enum CtrlTransitionKind {
     Mpt = 1,        // transition in MPT circuit
     Account,        // transition in account circuit
@@ -81,7 +82,8 @@ use layers::{LayerGadget, PaddingGadget};
 use mpt::MPTOpGadget;
 use operation::{AccountOp, HashTracesSrc, SingleOp};
 
-// building lagrange polynmials L for T so that L(n) = 1 when n = T else 0, n in [0, TO]
+// building lagrange polynmials L for T so that L(n) = 1 when n = T else 0, n in
+// [0, TO]
 fn lagrange_polynomial<Fp: FieldExt, const T: usize, const TO: usize>(
     ref_n: Expression<Fp>,
 ) -> Expression<Fp> {
@@ -659,7 +661,8 @@ pub struct EthTrieCircuit<F: FieldExt, const LITE: bool> {
     pub ops: Vec<AccountOp<F>>,
     /// the mpt table for operations,
     /// if NONE, circuit work under lite mode
-    /// no run-time checking for the consistents between ops and generated mpt table
+    /// no run-time checking for the consistents between ops and generated mpt
+    /// table
     pub mpt_table: Vec<MPTProofType>,
 }
 
@@ -725,11 +728,7 @@ impl<Fp: Hashable> Circuit<Fp> for HashCircuit<Fp> {
         mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
         let chip = hash::PoseidonHashChip::<Fp, { hash_circuit::DEFAULT_STEP }>::construct(
-            config, 
-            &self.0, 
-            self.1,
-            true,
-            None,
+            config, &self.0, self.1, true, None,
         );
         chip.load(&mut layouter)
     }
@@ -741,10 +740,12 @@ impl<Fp: Hashable> EthTrie<Fp> {
         self.ops.iter().flat_map(|op| op.hash_traces())
     }
 
-    /// Obtain the total required rows for mpt and hash circuits (include the top and bottom padding)
+    /// Obtain the total required rows for mpt and hash circuits (include the
+    /// top and bottom padding)
     pub fn use_rows(&self) -> (usize, usize) {
-        // calc rows for mpt circuit, we need to compare the rows used by adviced region and table region
-        // there would be rare case that the hash table is shorter than adviced part
+        // calc rows for mpt circuit, we need to compare the rows used by adviced region
+        // and table region there would be rare case that the hash table is
+        // shorter than adviced part
         let adv_rows = self.ops.iter().fold(0usize, |acc, op| acc + op.use_rows());
         let hash_rows =
             HashTracesSrc::from(self.ops.iter().flat_map(|op| op.hash_traces())).count();
@@ -767,11 +768,12 @@ impl<Fp: Hashable> EthTrie<Fp> {
     }
 
     /// Create all associated circuit objects, better API
-    /// [rows] specified the maxium hash entries the accompanied hash circuit can handle
-    /// and the option in rows specify the **circuit** rows mpt circuit would used
-    /// without specified it would derived a mpt circuit much larger than the accompanied
-    /// hash circuit, i.e: if the mpt circuit has almost fully filled there would be more
-    /// hashes need to be handled than the accompanied hash circuit can accommodate
+    /// [rows] specified the maxium hash entries the accompanied hash circuit
+    /// can handle and the option in rows specify the **circuit** rows mpt
+    /// circuit would used without specified it would derived a mpt circuit
+    /// much larger than the accompanied hash circuit, i.e: if the mpt
+    /// circuit has almost fully filled there would be more hashes need to
+    /// be handled than the accompanied hash circuit can accommodate
     pub fn to_circuits(
         self,
         rows: (usize, Option<usize>),
@@ -788,8 +790,8 @@ impl<Fp: Hashable> EthTrie<Fp> {
         )
     }
 
-    /// Create all associated circuit objects, with specificing the maxium rows circuit
-    /// can used for deriving the entry limit in mpt circuit
+    /// Create all associated circuit objects, with specificing the maxium rows
+    /// circuit can used for deriving the entry limit in mpt circuit
     pub fn to_circuits_by_circuit_limit(
         self,
         maxium_circuit_rows: usize,

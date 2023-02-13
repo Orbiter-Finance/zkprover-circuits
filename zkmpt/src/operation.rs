@@ -1028,9 +1028,11 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Mul;
+
     use super::*;
     use crate::test_utils::{rand_bytes_array, rand_gen, Fp};
-    use halo2_proofs::halo2curves::group::ff::{Field, PrimeField};
+    use halo2_proofs::{halo2curves::group::ff::{Field, PrimeField}, plonk::Expression};
 
     impl<Fp: FieldExt> SingleOp<Fp> {
         /// create an fully random update operation with leafs customable
@@ -1198,5 +1200,15 @@ mod tests {
             )
             .unwrap()
         );
+    }
+
+    #[test]
+    fn fp_invert_test() {
+        let four = Fp::from(10000u64);
+        let four_invert = four.invert().unwrap();
+        println!("four ========== {:?}", four);
+        println!("four_invert==== {:?}", four_invert);
+        println!("four_invert plus four ==== {:?}", four.mul(four_invert));
+        assert_eq!(four.mul(four_invert), Fp::from(1u64));
     }
 }
