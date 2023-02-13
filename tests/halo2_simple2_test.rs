@@ -356,6 +356,16 @@ fn halo2_simple2_test() {
         b: Value::known(b),
     };
 
+    use plotters::prelude::*;
+    let root = SVGBackend::new("halo2_simple2_test—layout.svg", (1024, 768)).into_drawing_area();
+    root.fill(&WHITE).unwrap();
+    let root1 = root
+        .titled("halo2_simple2_test—layout", ("sans—serif", 60))
+        .unwrap();
+    halo2_proofs::dev::CircuitLayout::default()
+        .render(k, &circuit, &root1)
+        .unwrap();
+
     // Arrange the public input. We expose the multiplication result in row 0
     // of the instance column, so we position it there in our public inputs.
     let mut public_inputs = vec![c];

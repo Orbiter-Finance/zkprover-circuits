@@ -1,5 +1,6 @@
 .DS_Store
 .idea
+*layout.*
 
 # Added by cargo
 /target

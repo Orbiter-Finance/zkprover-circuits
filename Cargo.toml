@@ -5,14 +5,14 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [workspace]
-members = [
-    "zkmpt",
-]
+members = ["zkmpt"]
 
 [dependencies]
 ff = "0.13"
 group = "0.13"
-halo2_proofs = { git = "https://github.com/scroll-tech/halo2.git", branch = "main" }
+halo2_proofs = { git = "https://github.com/scroll-tech/halo2.git", branch = "main", features = [
+    "dev-graph",
+] }
 halo2_gadgets = { git = "https://github.com/scroll-tech/halo2.git", branch = "main" }
 rand = "0.8.5"
 chrono = "0.4.23"
