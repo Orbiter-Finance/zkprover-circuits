@@ -1,5 +1,4 @@
 //! represent the data for a single operation on the MPT
-//!
 #![allow(clippy::derive_hash_xor_eq)]
 
 use super::{eth, serde, HashType};
@@ -31,11 +30,11 @@ pub struct MPTPath<Fp: FieldExt> {
     pub hash_types: Vec<HashType>,
     /// hashes from beginning of path, from the root of MPT to leaf node
     pub hashes: Vec<Fp>,
-    /// the cached traces for calculated all hashes required in verifing a MPT path,
-    /// include the leaf hashing      
+    /// the cached traces for calculated all hashes required in verifing a MPT
+    /// path, include the leaf hashing      
     pub hash_traces: Vec<(Fp, Fp, Fp)>,
-    /// the key of path, which is purposed to be known (though not need while constructing
-    /// empty leaf node)
+    /// the key of path, which is purposed to be known (though not need while
+    /// constructing empty leaf node)
     pub status: MPTPathStatus<Fp>,
 }
 
@@ -73,7 +72,8 @@ impl<Fp: FieldExt> MPTPath<Fp> {
         }
     }
 
-    /// the immediate value in key hashing (for leaf or sibling, depending on status)
+    /// the immediate value in key hashing (for leaf or sibling, depending on
+    /// status)
     pub fn key_immediate(&self) -> Option<Fp> {
         match self.status {
             MPTPathStatus::Empty => None,
@@ -87,7 +87,8 @@ impl<Fp: FieldExt> MPTPath<Fp> {
         matches!(self.status, MPTPathStatus::Extended(_))
     }
 
-    /// the proof (key, key_immediate, value) in extended, for the last sibling is a leaf
+    /// the proof (key, key_immediate, value) in extended, for the last sibling
+    /// is a leaf
     pub fn extended_proof(&self) -> Option<(Fp, Fp, Fp)> {
         match self.status {
             MPTPathStatus::Extended((_, proof)) => Some(proof),
@@ -210,8 +211,9 @@ impl<Fp: Hashable> MPTPath<Fp> {
         })
     }
 
-    /// extend a common path (contain only midle and leaf/empty) to under extended status,
-    /// it require caller to calc how many level should be extended and what the new key is
+    /// extend a common path (contain only midle and leaf/empty) to under
+    /// extended status, it require caller to calc how many level should be
+    /// extended and what the new key is
     pub fn extend(self, l: usize, new_key: Fp) -> Self {
         self.extend_with_hasher(l, new_key, |a, b| <Fp as Hashable>::hash([*a, *b]))
     }
@@ -390,7 +392,8 @@ impl<Fp: Hashable> SingleOp<Fp> {
 }
 
 fn bytes_to_fp<Fp: FieldExt>(mut bt: Vec<u8>) -> std::io::Result<Fp> {
-    // let expected_size = Fp::NUM_BITS as usize / 8 + if Fp::NUM_BITS % 8 == 0 { 0 } else { 1 };
+    // let expected_size = Fp::NUM_BITS as usize / 8 + if Fp::NUM_BITS % 8 == 0 { 0
+    // } else { 1 };
     bt.resize(64, 0u8);
     let arr: [u8; 64] = bt
         .as_slice()
@@ -402,7 +405,8 @@ fn bytes_to_fp<Fp: FieldExt>(mut bt: Vec<u8>) -> std::io::Result<Fp> {
 /// Represent for a eth account
 #[derive(Clone, Debug, Default)]
 pub struct Account<Fp> {
-    /// the balance of account, because it is the total amount of ethereum so field should be large enough
+    /// the balance of account, because it is the total amount of ethereum so
+    /// field should be large enough
     pub balance: Fp,
     /// the nonce of an account
     pub nonce: Fp,
@@ -440,8 +444,9 @@ impl<Fp: FieldExt> Account<Fp> {
         }
     }
 
-    /// access the cached traces for calculated all hashes required in obtain the account hash
-    /// there is totally 4 of them and the last one calculate the final hash
+    /// access the cached traces for calculated all hashes required in obtain
+    /// the account hash there is totally 4 of them and the last one
+    /// calculate the final hash
     pub fn hash_traces(&self, i: usize) -> Fp {
         if self.hash_traces.is_empty() {
             Fp::zero()
@@ -475,7 +480,8 @@ impl<Fp: Hashable> Account<Fp> {
     }
 }
 
-/// 2 fields for representing 32 byte, used for storage key or value, the hash is also saved
+/// 2 fields for representing 32 byte, used for storage key or value, the hash
+/// is also saved
 #[derive(Clone, Debug, Default)]
 pub struct KeyValue<Fp> {
     data: (Fp, Fp, Fp), // (the first 16 bytes, the second 16 bytes, hash value)
@@ -504,8 +510,8 @@ impl<Fp: FieldExt> KeyValue<Fp> {
     }
     /// obtain the linear combination of the value, in byte represent, which
     /// is common used in zkevm circuit
-    /// the u256 is represented by le bytes and combined with randomness 1, o, o^2 ... o^31 on each
-    /// and we calculate it from be represent
+    /// the u256 is represented by le bytes and combined with randomness 1, o,
+    /// o^2 ... o^31 on each and we calculate it from be represent
     pub fn u8_rlc(&self, randomness: Fp) -> Fp {
         let u128_hi = self.data.0.get_lower_128();
         let u128_lo = self.data.1.get_lower_128();
@@ -544,7 +550,8 @@ impl<Fp: Hashable> KeyValue<Fp> {
     }
 }
 
-/// Represent an operation in eth MPT, which update 2 layer of tries (state and account)
+/// Represent an operation in eth MPT, which update 2 layer of tries (state and
+/// account)
 #[derive(Clone, Debug, Default)]
 pub struct AccountOp<Fp: FieldExt> {
     /// the operation on the account trie (first layer)
@@ -1032,7 +1039,7 @@ mod tests {
 
     use super::*;
     use crate::test_utils::{rand_bytes_array, rand_gen, Fp};
-    use halo2_proofs::{halo2curves::group::ff::{Field, PrimeField}, plonk::Expression};
+    use halo2_proofs::halo2curves::group::ff::{Field, PrimeField};
 
     impl<Fp: FieldExt> SingleOp<Fp> {
         /// create an fully random update operation with leafs customable
@@ -1106,7 +1113,13 @@ mod tests {
         let test2 = Fp::from(16203805u64);
         // 16203805(decimal) =  11,1101110100000000011101(binary)
         let ret2 = decompose(test2, 22);
-        assert_eq!(ret2.0, vec![true,false,true,true,true,false,false,false,false,false,false,false,false,false,true,false,true,true,true,false,true,true]);
+        assert_eq!(
+            ret2.0,
+            vec![
+                true, false, true, true, true, false, false, false, false, false, false, false,
+                false, false, true, false, true, true, true, false, true, true
+            ]
+        );
         assert_eq!(recover(&ret2.0, ret2.1), test2);
 
         for _ in 0..1000 {
@@ -1122,7 +1135,8 @@ mod tests {
         let trace: serde::SMTTrace = serde_json::from_str(example).unwrap();
 
         println!("{:?}", trace.state_path[0]);
-        // let parse: SMTPathParse<Fp> = trace.state_path[0].as_ref().unwrap().try_into().unwrap();
+        // let parse: SMTPathParse<Fp> =
+        // trace.state_path[0].as_ref().unwrap().try_into().unwrap();
         let parse: SMTPathParse<Fp> = trace.state_path[0].as_ref().unwrap().try_into().unwrap();
         println!("{:?}", parse.0);
 
@@ -1131,17 +1145,16 @@ mod tests {
         println!("{:?}", parse.0);
     }
 
-  
     #[test]
     fn trace_convert_insert_op() {
         let example = r#"{"address":"0xb36feaeaf76c2a33335b73bef9aef7a23d9af1e3","accountKey":"0xf59112e5670628682b1ec72767b1a6153096d47742e1d9455c175a955211e900","accountPath":[{"pathPart":"0x35","root":"0xebb00990cd20ab357e0e2115c0e301b8f4b0e0ee80b0500b3071e25c15770708","path":[{"value":"0x637a3f9434eddbed4a74ccf9472cf0e0d2806efe6100c42787fc9e19e1bf8028","sibling":"0x8251455b38bef426b8c56ad1e5c4b2004d0a57cf8af0aa499329e502f3a5022b"},{"value":"0xb1ca958b3030d92b8a07ea6b1733c2e015a11b80612b22bbf8be572b237ac308","sibling":"0xe582f6c510f1bf05d68badf1284b17ab9b44408e12f7c46b09c9260dd572fa2e"},{"value":"0x44947e33abac81c9d1cdbdc1eddf1646c042d5ba09a2096e38b280995a1fe805","sibling":"0x0000000000000000000000000000000000000000000000000000000000000000"},{"value":"0x706201d8f8e421382bc72b45f9f6bda4a4686ca7c8f83fd6cd548dc55d6cfd07","sibling":"0x0000000000000000000000000000000000000000000000000000000000000000"},{"value":"0x060d011c93edea04679826c4ca35f903e85f3d255b124cf327d331b9a256bf0e","sibling":"0x0000000000000000000000000000000000000000000000000000000000000000"},{"value":"0x0498324f694fc9f300d1600f78e054657dcb9ce620358beba8c1e847a14dc203","sibling":"0x559653b52296e19fe878d6430dbc748ebcd3046b463aa32689eac16c29702607"}],"leaf":{"value":"0xebda5e259838533294ae6548ea49d9ef6c13113fac4f311890821345d3cb3617","sibling":"0x7581e431a68d0fa641e14a7d29a6c2b150db6da1d13f59dee6f7f492a0bebd29"}},{"pathPart":"0xf5","root":"0xab4ef5db245d66748b2cbd6eb7f57ebd8fee61444130233546fcd196a0298706","path":[{"value":"0x26e297ed2c0265392eb4d55ca93464914535a3da6c1a70a5884bbf0048f2bc11","sibling":"0x8251455b38bef426b8c56ad1e5c4b2004d0a57cf8af0aa499329e502f3a5022b"},{"value":"0x08eaa42867286da95ec7cf88e17ee86fdbc158b6c631365eab3f00f20ac7a029","sibling":"0xe582f6c510f1bf05d68badf1284b17ab9b44408e12f7c46b09c9260dd572fa2e"},{"value":"0xfee9e393c454b03ebe8c59988ee4c4a7224fdd133d211f1057131253610aa91d","sibling":"0x0000000000000000000000000000000000000000000000000000000000000000"},{"value":"0x01198505cc61e6be5421ed71bb380cb85f7d77af957c30d9a79478f236c4802b","sibling":"0x0000000000000000000000000000000000000000000000000000000000000000"},{"value":"0xd91419a365920d5a3bd771e9d354abd558d0f9ff429a37d002ebfd122833ea2c","sibling":"0x0000000000000000000000000000000000000000000000000000000000000000"},{"value":"0x6af55a02e1b2435ebbbc58bf8e9b83efc4b4fd10dad2c739ba6be95119781e00","sibling":"0x559653b52296e19fe878d6430dbc748ebcd3046b463aa32689eac16c29702607"},{"value":"0x34a4740b27bec9410f659ec6134d6f7c9c933f35143152c374b125e2bce7ac2a","sibling":"0x0000000000000000000000000000000000000000000000000000000000000000"},{"value":"0x7368c8ebabb8fd55758c492232e6302b66efe9ce03c3eb22e9b7540eb15c8a1c","sibling":"0x0498324f694fc9f300d1600f78e054657dcb9ce620358beba8c1e847a14dc203"}],"leaf":{"value":"0x33c5435c783d711eca3cb21179f8afaf6dd0be8ca0f066d0daace28b17fc281d","sibling":"0xf59112e5670628682b1ec72767b1a6153096d47742e1d9455c175a955211e900"}}],"accountUpdate":[null,{"nonce":1,"balance":"0x0","codeHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}],"commonStateRoot":"0x0000000000000000000000000000000000000000000000000000000000000000","statePath":[null,null],"stateUpdate":[null,null]}"#;
         let trace: serde::SMTTrace = serde_json::from_str(example).unwrap();
 
         let data: AccountOp<Fp> = (&trace).try_into().unwrap();
-        println!("{:?}", data);
+        println!("ddd {:?}", data);
     }
 
-     #[test]
+    #[test]
     fn trace_account_data() {
         let data: Account<Fp> = Account {
             balance: Fp::from(0u64),

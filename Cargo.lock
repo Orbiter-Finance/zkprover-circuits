@@ -1654,3 +1654,22 @@ dependencies = [
  "rand_core",
  "tabbycat",
 ]
+
+[[package]]
+name = "zkprover-mpt-circuits"
+version = "0.1.0"
+dependencies = [
+ "bencher",
+ "halo2_proofs 0.2.0 (git+https://github.com/privacy-scaling-explorations/halo2.git?tag=v2022_09_10)",
+ "hex",
+ "lazy_static",
+ "num-bigint",
+ "plotters",
+ "poseidon-circuit",
+ "rand",
+ "rand_chacha",
+ "serde",
+ "serde_json",
+ "subtle",
+ "thiserror",
+]
