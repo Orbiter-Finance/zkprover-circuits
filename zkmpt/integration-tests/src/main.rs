@@ -36,7 +36,7 @@ fn main() {
 
     let final_root = data.final_root();
 
-    let (circuit, _) = match k {
+    let (circuit, hash_circuit) = match k {
         6 => data.circuits(40),
         7 => data.circuits(90),
         8 => data.circuits(200),
@@ -47,7 +47,7 @@ fn main() {
     };
 
     let prover_mpt = MockProver::<Fp>::run(k, &circuit, vec![]).unwrap();
-    // let prover_hash = MockProver::<Fp>::run(k + 6, &hash_circuit, vec![]).unwrap();
+    let prover_hash = MockProver::<Fp>::run(k + 6, &hash_circuit, vec![]).unwrap();
 
     assert_eq!(prover_mpt.verify(), Ok(()));
     // assert_eq!(prover_hash.verify(), Ok(()));

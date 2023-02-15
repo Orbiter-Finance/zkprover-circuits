@@ -138,8 +138,9 @@ impl Config {
 
         let build_entry_lookup_not_exist = |meta: &mut VirtualCells<'_, F>| {
             [
-                // it lookup the mpt gadget above target gadget (only the hash type of old trie is looked up,
-                // it is mpt_table's responsibiliy to ensure old_root == new_root here)
+                // it lookup the mpt gadget above target gadget (only the hash type of old trie is
+                // looked up, it is mpt_table's responsibiliy to ensure old_root ==
+                // new_root here)
                 (
                     Expression::Constant(F::from(super::HashType::Empty as u64)),
                     meta.query_advice(ctrl_id, Rotation::prev()),
@@ -193,7 +194,8 @@ impl Config {
         meta.lookup_any("mpt account destroy entry lookup", |meta| {
             let s_enable = meta.query_advice(self.proof_sel[4], Rotation::cur());
 
-            // TODO: not handle AccountDestructed yet (this entry has no lookup: i.e. no verification)
+            // TODO: not handle AccountDestructed yet (this entry has no lookup: i.e. no
+            // verification)
             build_entry_lookup_common(meta, (3, 2))
                 .into_iter()
                 .map(|(fst, snd)| (fst * s_enable.clone(), snd))
@@ -767,6 +769,13 @@ mod test {
 
     #[test]
     fn solo_mpt_table() {
+        // config.address,
+        // config.storage_key,
+        // config.proof_type,
+        // config.new_root,
+        // config.old_root,
+        // config.new_value,
+        // config.old_value,
         let randomness = Fp::from(0x100u64);
         let address =
             Fp::from_str_vartime("1024405194924367004341088897210496901613465825763").unwrap(); //0xb36feaeaf76c2a33335b73bef9aef7a23d9af1e3
