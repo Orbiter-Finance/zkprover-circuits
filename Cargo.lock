@@ -1664,6 +1664,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "num-bigint",
+ "num-traits",
  "plotters",
  "poseidon-circuit",
  "rand",
