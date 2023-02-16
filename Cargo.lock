@@ -629,25 +629,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "halo2-mpt-circuits"
-version = "0.1.0"
-dependencies = [
- "bencher",
- "halo2_proofs 0.2.0 (git+https://github.com/privacy-scaling-explorations/halo2.git?tag=v2022_09_10)",
- "hex",
- "lazy_static",
- "num-bigint",
- "plotters",
- "poseidon-circuit",
- "rand",
- "rand_chacha",
- "serde",
- "serde_json",
- "subtle",
- "thiserror",
-]
-
-[[package]]
 name = "halo2_gadgets"
 version = "0.2.0"
 source = "git+https://github.com/scroll-tech/halo2.git?branch=main#0a8646b78286a13d320759b1c585262d6536dce4"
