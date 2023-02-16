@@ -31,7 +31,7 @@ impl<Fp: FieldExt> Account<Fp> {
 
         self
     }
-
+    /// complete
     pub(crate) fn complete(self, hasher: impl FnMut(&Fp, &Fp) -> Fp) -> Self {
         if self.hash_traces.is_empty() {
             self.trace(hasher)

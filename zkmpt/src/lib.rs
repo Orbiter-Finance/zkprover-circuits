@@ -650,6 +650,10 @@ impl<Fp: FieldExt> EthTrie<Fp> {
     pub fn final_root(&self) -> Fp {
         self.final_root
     }
+    /// Obtan the start root
+    pub fn start_root(&self) -> Fp {
+        self.start_root
+    }
 }
 
 /// the mpt circuit type
