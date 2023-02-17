@@ -1,4 +1,16 @@
 use halo2_proofs::arithmetic::FieldExt;
+
+/// Represent an account operation in MPT
+#[derive(Clone, Debug, Default)]
+pub struct AccountOp<Fp: FieldExt> {
+
+    /// the state before updating in account
+    pub account_before: Option<Account<Fp>>,
+    /// the state after updating in account
+    pub account_after: Option<Account<Fp>>,
+
+}
+
 /// Represent for a zkProver account
 #[derive(Clone, Debug, Default)]
 pub struct Account<Fp> {
@@ -14,6 +26,7 @@ pub struct Account<Fp> {
     pub hash_traces: Vec<(Fp, Fp, Fp)>,
 }
 
+/// impl
 impl<Fp: FieldExt> Account<Fp> {
     /// calculating all traces ad-hoc with hasher function
     pub(crate) fn trace(mut self, mut hasher: impl FnMut(&Fp, &Fp) -> Fp) -> Self {
@@ -62,6 +75,8 @@ impl<Fp: FieldExt> Account<Fp> {
     }
 }
 
+
+/// test 
 #[cfg(test)]
 mod tests {
 
@@ -73,6 +88,7 @@ mod tests {
 
     use super::Account;
 
+    /// test 
     #[test]
     fn trace_account_data() {
         let account: Account<Fp> = Account {
@@ -121,6 +137,6 @@ mod tests {
             )
             .unwrap(),
             ..Default::default()
-        }
+        };
     }
 }

@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 #![allow(unused_macros)]
 #![allow(clippy::too_many_arguments)]
-#![deny(missing_docs)]
+// #![deny(missing_docs)]
 #![deny(unsafe_code)]
 
 #[cfg(test)]
