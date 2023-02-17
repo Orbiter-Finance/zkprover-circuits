@@ -15,3 +15,5 @@ pub use hash_circuit::{hash, poseidon};
 pub mod operation;
 
 pub mod state_trie;
+
+pub mod gadgets;
