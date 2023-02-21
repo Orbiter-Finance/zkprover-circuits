@@ -148,6 +148,6 @@ mod tests {
         let hash_circuit = HashCircuit::new(hash_rows, hashes);
         let prover_hash = MockProver::<Fp>::run(k, &hash_circuit, vec![]).unwrap();
 
-        // assert_eq!(prover_hash.verify(), Ok(()));
+        assert_eq!(prover_hash.verify(), Ok(()));
     }
 }

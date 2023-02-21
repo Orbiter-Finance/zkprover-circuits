@@ -1,0 +1,44 @@
+{
+    "startMptRoot": "",
+    "endMptRoot": "",
+    "transitionWitness": [
+        {
+            "address": "",
+            "accountKey": "",
+            "pubKey": "",
+            "txHash": "",
+            "txSignature": "",
+            "mptRootUpdate": {
+                "oldRoot": "",
+                "newRoot": ""
+            },
+            "accountUpdate": {
+                "oldAccountState":  {
+                    "nonce": 0,
+                    "gasBalance": "0x1ffffffffffffffffffffffffffffffffffffffffffd5a5fa703d6131f2c2e5",
+                    "txHashHistory": ""
+                },
+                "newAccountState": {
+                    "nonce": 1,
+                    "gasBalance": "0x1ffffffffffffffffffffffffffffffffffffffffffd5a5fa703d6131f2c2e5",
+                    "txHashHistory": ""
+                }
+            },
+            "accountPath": [
+                {
+                    "pathPart": "",
+                    "path": [
+                        {
+                            "value": "",
+                            "sibling": ""
+                        },
+                        {
+                            "value": "",
+                            "sibling": ""
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

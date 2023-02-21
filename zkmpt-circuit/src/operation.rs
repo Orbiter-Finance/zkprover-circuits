@@ -84,7 +84,7 @@ mod tests {
     use hash_circuit::{hash, poseidon::Hash, Hashable};
     use std::{vec};
 
-    use crate::test_utils::{hash_str_to_fp, Fp};
+    use crate::{test_utils::{hash_str_to_fp, Fp}, state_trie::HashCircuit};
 
     use super::Account;
 

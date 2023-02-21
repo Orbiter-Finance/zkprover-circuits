@@ -17,3 +17,5 @@ pub mod operation;
 pub mod state_trie;
 
 pub mod gadgets;
+
+pub mod serde;
