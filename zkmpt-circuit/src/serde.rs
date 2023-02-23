@@ -189,6 +189,26 @@ pub struct AccountUpdate {
     pub new_account_state: Option<AccountState>,
 }
 
+/// struct in SMTTrace
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SMTNode {
+    /// value
+    pub value: Hash,
+    /// sibling
+    pub sibling: Hash,
+}
+///
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
+pub struct AccountPath {
+    /// path
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub path: Vec<SMTNode>,
+    /// partitial key which is used for path
+    #[serde(deserialize_with = "de_uint_hex", serialize_with = "se_uint_hex")]
+    pub path_part: BigUint,
+}
+
 ///
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
@@ -209,4 +229,15 @@ pub struct MPTTransTrace {
     pub mpt_root_update: Option<MptRootUpdate>,
 
     pub account_update: Option<AccountUpdate>,
+
+    pub account_path: Vec<Option<AccountPath>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
+pub struct BlockResult {
+    pub start_mpt_root: Hash,
+    pub end_mpt_root: Hash,
+    // #[serde(rename = "mptwitness", default)]
+    pub mpt_trans_trace: Vec<MPTTransTrace>,
 }
