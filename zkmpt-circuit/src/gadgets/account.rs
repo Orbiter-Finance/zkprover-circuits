@@ -5,7 +5,9 @@ use halo2_proofs::{
     poly::Rotation,
 };
 
-use crate::{operation::Account, state_trie::HashTable};
+use crate::{operation::Account};
+
+use super::hash_util::HashTable;
 
 pub const CIRCUIT_ROW: usize = 4;
 const LAST_ROW: usize = CIRCUIT_ROW - 1;
