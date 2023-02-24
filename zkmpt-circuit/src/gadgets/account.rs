@@ -140,12 +140,12 @@ impl<'d, Fp: FieldExt> AccountChip<'d, Fp> {
         for (col, vals, desc) in [
             (
                 config.acc_data_fields,
-                [data.nonce, data.gas_balance, data.tx_hash.0],
+                [data.nonce, data.gas_balance, data.tx_hash],
                 "data field",
             ),
             (
                 config.acc_data_fields_ext,
-                [Fp::zero(), Fp::zero(), data.tx_hash.1],
+                [Fp::zero(), Fp::zero(), data.tx_hash],
                 "data field ext",
             ),
             (
