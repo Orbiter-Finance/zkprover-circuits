@@ -1,0 +1,25 @@
+{
+    "userSubmitTx": [
+        {
+            "address": "",
+            "pubKey": "",
+            "signature": "",
+            "txParam": "",
+            "nonce": ""
+        },
+        {
+            "address": "",
+            "pubKey": "",
+            "signature": "",
+            "txParam": "",
+            "nonce": ""
+        },
+        {
+            "address": "",
+            "pubKey": "",
+            "signature": "",
+            "txParam": "",
+            "nonce": ""
+        }
+    ]
+}

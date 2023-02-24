@@ -171,22 +171,23 @@ pub struct MptRootUpdate {
 ///
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
-pub struct AccountState {
+pub struct AccountStateData {
     pub nonce: u64,
     #[serde(deserialize_with = "de_uint_hex", serialize_with = "se_uint_hex")]
     pub gas_balance: BigUint,
 
     /// Recrusive hash of the account tx list hashes like: hash(n) = hash(txN,
     /// hash(n-1))
-    pub tx_hash_history: Hash,
+    pub pre_recrusive_tx_hash: Hash,
+    pub tx_hash: Hash,
 }
 
 ///
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
 pub struct AccountUpdate {
-    pub old_account_state: Option<AccountState>,
-    pub new_account_state: Option<AccountState>,
+    pub old_account_state: Option<AccountStateData>,
+    pub new_account_state: Option<AccountStateData>,
 }
 
 /// struct in SMTTrace
