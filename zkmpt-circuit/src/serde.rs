@@ -178,7 +178,8 @@ pub struct AccountStateData {
 
     /// Recrusive hash of the account tx list hashes like: hash(n) = hash(txN,
     /// hash(n-1))
-    pub tx_hash_history: Hash,
+    pub pre_recrusive_tx_hash: Hash,
+    pub tx_hash: Hash,
 }
 
 ///
