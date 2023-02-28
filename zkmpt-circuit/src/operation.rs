@@ -2,24 +2,65 @@ use std::hash::Hash;
 
 use super::serde;
 use halo2_proofs::arithmetic::FieldExt;
-use hash_circuit::Hashable;
+use hash_circuit::{hash, Hashable};
+use num_bigint::BigInt;
+use num_traits::Num;
 
 /// Represent an account operation in MPT
 #[derive(Clone, Debug, Default)]
 pub struct AccountOp<Fp: FieldExt> {
     /// the state before updating in account
-    pub account_before: Option<Account<Fp>>,
+    pub account_before: Account<Fp>,
     /// the state after updating in account
-    pub account_after: Option<Account<Fp>>,
+    pub account_after: Account<Fp>,
 }
 
+impl<Fp: FieldExt> AccountOp<Fp> {
+    /// the root of account trie before operation
+    pub fn account_root_before(&self) -> Fp {
+        self.account_before.state_root
+    }
+
+    pub fn account_root_after(&self) -> Fp {
+        self.account_after.state_root
+    }
+}
+
+impl<Fp: Hashable> AccountOp<Fp> {
+    /// providing the padding record for hash table
+    pub fn padding_hash() -> (Fp, Fp, Fp) {
+        (
+            Fp::zero(),
+            Fp::zero(),
+            Hashable::hash([Fp::zero(), Fp::zero()]),
+        )
+    }
+
+    // pub fn hash_traces(&self) -> impl Iterator<Item = &(Fp, Fp, Fp)> + Clone {
+    //     self.acc_trie
+    //         .hash_traces()
+    //         .chain(self.state_trie.iter().flat_map(|i| i.hash_traces()))
+    //         .chain(
+    //             self.account_before
+    //                 .iter()
+    //                 .flat_map(|i| i.hash_traces.iter()),
+    //         )
+    //         .chain(self.account_after.iter().flat_map(|i| i.hash_traces.iter()))
+    //         .chain(Some(self.address_rep.hash_traces()))
+    //         .chain(self.store_key.as_ref().map(|v| v.hash_traces()))
+    //         .chain(self.store_before.as_ref().map(|v| v.hash_traces()))
+    //         .chain(self.store_after.as_ref().map(|v| v.hash_traces()))
+    // }
+}
 /// Represent for a zkProver account
 #[derive(Clone, Debug, Default)]
 pub struct Account<Fp> {
+    ///address
+    pub address: Fp,
     /// pub_key: Fp,
     pub pub_key: Fp,
     /// key of address
-    pub address_key: Fp,
+    pub account_key: Fp,
     /// the gasBalance of account
     pub gas_balance: Fp,
     /// the nonce of an account
@@ -40,14 +81,22 @@ pub struct Account<Fp> {
 impl<Fp: FieldExt> Account<Fp> {
     /// calculating all traces ad-hoc with hasher function
     pub(crate) fn trace(mut self, mut hasher: impl FnMut(&Fp, &Fp) -> Fp) -> Self {
+        let account_key = hasher(&self.address, &Fp::zero());
+        // println!("account_key {account_key:?}");
+
+        assert_eq!(account_key, self.account_key);
+
+
+        self.account_key = hasher(&self.address, &Fp::zero());
         self.recrusive_tx_hash = hasher(&self.pre_recrusive_tx_hash, &self.tx_hash);
-        let h1 = hasher(&self.address_key, &self.pub_key);
+        let h1 = hasher(&self.account_key, &self.pub_key);
         let h2 = hasher(&self.nonce, &self.gas_balance);
         let h3 = hasher(&self.recrusive_tx_hash, &self.state_root);
         let h4 = hasher(&h3, &h2);
         let h_final = hasher(&h4, &h1);
 
         self.hash_traces = vec![
+            (self.address, Fp::zero(), self.account_key),
             (
                 self.pre_recrusive_tx_hash,
                 self.tx_hash,
@@ -133,18 +182,69 @@ fn bytes_to_fp<Fp: FieldExt>(mut bt: Vec<u8>) -> std::io::Result<Fp> {
     Ok(Fp::from_bytes_wide(&arr))
 }
 
-impl<'d, Fp: Hashable> TryFrom<&'d serde::AccountStateData> for Account<Fp> {
+/// Represent an account operation in MPT
+#[derive(Debug, Default, Clone)]
+pub struct FpStruct<Fp> {
+    pub fp: Fp,
+}
+
+impl<'d, Fp: Hashable> From<&'d serde::Hash> for (Fp,) {
+    fn from(data: &'d serde::Hash) -> Self {
+        let hash_str = data.hex();
+        let hash_int = BigInt::from_str_radix(&hash_str.trim_start_matches("0x"), 16)
+            .unwrap()
+            .to_string();
+        // let hash_int = BigInt::from_str
+        let hash_fp: Fp = Fp::from_str_vartime(&hash_int).unwrap();
+
+        (hash_fp,)
+    }
+}
+
+impl<'d, Fp: Hashable> From<&'d serde::Address> for (Fp,) {
+    fn from(data: &'d serde::Address) -> Self {
+        let hash_str = data.hex();
+        let hash_int = BigInt::from_str_radix(&hash_str.trim_start_matches("0x"), 16)
+            .unwrap()
+            .to_string();
+        // let hash_int = BigInt::from_str
+        let hash_fp: Fp = Fp::from_str_vartime(&hash_int).unwrap();
+
+        (hash_fp,)
+    }
+}
+
+impl<'d, Fp: Hashable>
+    TryFrom<(
+        &'d serde::AccountStateData,
+        &'d serde::Address,
+        &'d serde::Hash,
+        &'d serde::Hash,
+    )> for Account<Fp>
+{
     type Error = TraceError;
 
-    fn try_from(acc_trace: &'d serde::AccountStateData) -> Result<Self, Self::Error> {
-        let nonce = Fp::from(acc_trace.nonce);
+    fn try_from(
+        acc_trace: (
+            &'d serde::AccountStateData,
+            &'d serde::Address,
+            &'d serde::Hash,
+            &'d serde::Hash,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (account_data, address, account_key, pub_key) = acc_trace;
+        let nonce = Fp::from(account_data.nonce);
         let gas_balance =
-            bytes_to_fp(acc_trace.gas_balance.to_bytes_le()).map_err(TraceError::DeErr)?;
-        let pre_recrusive_tx_hash = Fp::zero();
-        let tx_hash = Fp::zero();
+            bytes_to_fp(account_data.gas_balance.to_bytes_le()).map_err(TraceError::DeErr)?;
+        let (pre_recrusive_tx_hash,) = <(Fp,)>::from(&account_data.pre_recrusive_tx_hash);
+        let (address,) = <(Fp,)>::from(address);
+        let (pub_key,) = <(Fp,)>::from(pub_key);
+        let (account_key,) = <(Fp,)>::from(account_key);
+        let (tx_hash,) = <(Fp,)>::from(&account_data.tx_hash);
         let acc = Self {
-            pub_key: Fp::zero(),
-            address_key: Fp::zero(),
+            address,
+            pub_key,
+            account_key,
             nonce,
             gas_balance,
             tx_hash,
@@ -162,16 +262,19 @@ impl<'d, Fp: Hashable> TryFrom<&'d serde::MPTTransTrace> for AccountOp<Fp> {
 
     fn try_from(trace: &'d serde::MPTTransTrace) -> Result<Self, Self::Error> {
         let account_update = trace.account_update.as_ref().expect("msg");
+        let address = &trace.address;
+        let account_key = &trace.account_key;
+        let pub_key = &trace.pub_key;
         let account_before = {
             let account_data = account_update.old_account_state.as_ref().expect("msg");
-            let account: Account<Fp> = (account_data).try_into()?;
-            Some(account)
+            let account: Account<Fp> = (account_data, address, account_key, pub_key).try_into()?;
+            account
         };
 
         let account_after = {
             let account_data = account_update.new_account_state.as_ref().expect("");
-            let account: Account<Fp> = (account_data).try_into()?;
-            Some(account)
+            let account: Account<Fp> = (account_data, address, account_key, pub_key).try_into()?;
+            account
         };
 
         Ok(Self {
@@ -181,6 +284,58 @@ impl<'d, Fp: Hashable> TryFrom<&'d serde::MPTTransTrace> for AccountOp<Fp> {
     }
 }
 
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct HashableField<Fp: FieldExt>(Fp);
+
+impl<Fp: FieldExt> std::hash::Hash for HashableField<Fp> {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: std::hash::Hasher,
+    {
+        state.write_u128(self.0.get_lower_128());
+    }
+}
+
+impl<Fp: FieldExt> From<Fp> for HashableField<Fp> {
+    fn from(v: Fp) -> Self {
+        Self(v)
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct HashTracesSrc<T, Fp: FieldExt> {
+    source: T,
+    deduplicator: std::collections::HashSet<HashableField<Fp>>,
+}
+
+impl<T, Fp: FieldExt> From<T> for HashTracesSrc<T, Fp> {
+    fn from(source: T) -> Self {
+        Self {
+            source,
+            deduplicator: Default::default(),
+        }
+    }
+}
+
+impl<'d, T, Fp> Iterator for HashTracesSrc<T, Fp>
+where
+    T: Iterator<Item = &'d (Fp, Fp, Fp)>,
+    Fp: FieldExt,
+{
+    type Item = &'d (Fp, Fp, Fp);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for i in self.source.by_ref() {
+            let cp_i = HashableField::from(i.2);
+            if self.deduplicator.get(&cp_i).is_none() {
+                self.deduplicator.insert(cp_i);
+                return Some(i);
+            }
+        }
+        None
+    }
+}
 /// test
 #[cfg(test)]
 mod tests {
@@ -190,7 +345,10 @@ mod tests {
     use num_bigint::BigUint;
     use std::vec;
 
-    use crate::test_utils::{hash_str_to_fp, Fp};
+    use crate::{
+        serde::HexBytes,
+        test_utils::{hash_str_to_fp, Fp},
+    };
 
     use super::{bytes_to_fp, Account, TraceError};
 
@@ -203,7 +361,20 @@ mod tests {
             .to_bytes_le(),
         )
         .unwrap();
-        println!("gasbalance {gas_balance:?}")
+        println!("gasbalance {gas_balance:?}");
+
+        let a = Fp::from(1000u64);
+        let b = Fp::from(10u64);
+        let c = Fp::from(1001u64);
+        assert_eq!(a.lt(&c), true);
+        assert_eq!(b.lt(&a), true);
+        println!("Fp a {a:?}");
+
+        let str = "0x41527e5c9713e748e4d0d28d270071a7710acffa8a2221605f6162a185de3416";
+        let hash_bytes = HexBytes::<32>::try_from(str).unwrap();
+        let hash_bytes_hex = hash_bytes.hex();
+        println!("hash_bytes {hash_bytes:?}");
+        println!("hash_bytes_hex {hash_bytes_hex:?}");
     }
 
     /// test
@@ -220,7 +391,9 @@ mod tests {
         }
 
         let account: Account<Fp> = Account {
-            address_key: hash_str_to_fp(
+            address: hash_str_to_fp("0xb364e75b1189dcbbf7f0c856456c1ba8e4d6481b"),
+
+            account_key: hash_str_to_fp(
                 "0xfb8fc76b0dd70729afc7eb236fbcb772770e306acb145552c19c045f0211b75e",
             ),
             pub_key: hash_str_to_fp(
@@ -245,7 +418,7 @@ mod tests {
 
         assert_eq!(
             data.account_hash(),
-            hash_str_to_fp("0x1716abf78e2a599485d80f9943b903b26e7689d8b84cbbe9760c94f3d8b296a9")
+            hash_str_to_fp("0x10bfe617037389f321b8a42581d8366a9cc8ae353d8b7d54195c28016c6054e8")
         );
     }
 }

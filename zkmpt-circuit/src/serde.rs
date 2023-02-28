@@ -1,4 +1,5 @@
 //! deserialize data for operations
+use halo2_proofs::halo2curves::FieldExt;
 use num_bigint::BigUint;
 use serde::{
     de::{Deserializer, Error},
@@ -6,7 +7,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use std::fmt::{Debug, Display, Formatter};
+use std::{fmt::{Debug, Display, Formatter}, ops::Add};
 
 impl<const LEN: usize> Serialize for HexBytes<LEN> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
