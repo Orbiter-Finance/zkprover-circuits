@@ -50,12 +50,15 @@ impl<Fp: FieldExt> StateTrie<Fp> {
     }
 }
 
-// impl<Fp: Hashable> StateTrie<Fp> {
 
-//     pub fn hash_traces(&self) -> impl Iteratro<Item = &(Fp, Fp, Fp) + Clone {
-//         HashTracesSrc::from(self.ops.iter().flat_map(|op| op.hash_traces()))
-//     }
-// }
+impl<Fp: Hashable> StateTrie<Fp> {
+
+    // pub fn hash_traces(&self) -> impl Iteratro<Item = &(Fp, Fp, Fp) + Clone {
+    //     HashTracesSrc::from(self.ops.iter().flat_map(|op| op.hash_traces()))
+    // }
+
+    
+}
 
 /// StateTrie
 #[derive(Clone, Default, Debug)]
