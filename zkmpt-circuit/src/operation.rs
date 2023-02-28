@@ -10,11 +10,48 @@ use num_traits::Num;
 #[derive(Clone, Debug, Default)]
 pub struct AccountOp<Fp: FieldExt> {
     /// the state before updating in account
-    pub account_before: Option<Account<Fp>>,
+    pub account_before: Account<Fp>,
     /// the state after updating in account
-    pub account_after: Option<Account<Fp>>,
+    pub account_after: Account<Fp>,
 }
 
+impl<Fp: FieldExt> AccountOp<Fp> {
+    /// the root of account trie before operation
+    pub fn account_root_before(&self) -> Fp {
+        self.account_before.state_root
+    }
+
+    pub fn account_root_after(&self) -> Fp {
+        self.account_after.state_root
+    }
+}
+
+impl<Fp: Hashable> AccountOp<Fp> {
+    /// providing the padding record for hash table
+    pub fn padding_hash() -> (Fp, Fp, Fp) {
+        (
+            Fp::zero(),
+            Fp::zero(),
+            Hashable::hash([Fp::zero(), Fp::zero()]),
+        )
+    }
+
+    // pub fn hash_traces(&self) -> impl Iterator<Item = &(Fp, Fp, Fp)> + Clone {
+    //     self.acc_trie
+    //         .hash_traces()
+    //         .chain(self.state_trie.iter().flat_map(|i| i.hash_traces()))
+    //         .chain(
+    //             self.account_before
+    //                 .iter()
+    //                 .flat_map(|i| i.hash_traces.iter()),
+    //         )
+    //         .chain(self.account_after.iter().flat_map(|i| i.hash_traces.iter()))
+    //         .chain(Some(self.address_rep.hash_traces()))
+    //         .chain(self.store_key.as_ref().map(|v| v.hash_traces()))
+    //         .chain(self.store_before.as_ref().map(|v| v.hash_traces()))
+    //         .chain(self.store_after.as_ref().map(|v| v.hash_traces()))
+    // }
+}
 /// Represent for a zkProver account
 #[derive(Clone, Debug, Default)]
 pub struct Account<Fp> {
@@ -48,6 +85,8 @@ impl<Fp: FieldExt> Account<Fp> {
         // println!("account_key {account_key:?}");
 
         assert_eq!(account_key, self.account_key);
+
+
         self.account_key = hasher(&self.address, &Fp::zero());
         self.recrusive_tx_hash = hasher(&self.pre_recrusive_tx_hash, &self.tx_hash);
         let h1 = hasher(&self.account_key, &self.pub_key);
@@ -229,13 +268,13 @@ impl<'d, Fp: Hashable> TryFrom<&'d serde::MPTTransTrace> for AccountOp<Fp> {
         let account_before = {
             let account_data = account_update.old_account_state.as_ref().expect("msg");
             let account: Account<Fp> = (account_data, address, account_key, pub_key).try_into()?;
-            Some(account)
+            account
         };
 
         let account_after = {
             let account_data = account_update.new_account_state.as_ref().expect("");
             let account: Account<Fp> = (account_data, address, account_key, pub_key).try_into()?;
-            Some(account)
+            account
         };
 
         Ok(Self {
@@ -245,6 +284,58 @@ impl<'d, Fp: Hashable> TryFrom<&'d serde::MPTTransTrace> for AccountOp<Fp> {
     }
 }
 
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct HashableField<Fp: FieldExt>(Fp);
+
+impl<Fp: FieldExt> std::hash::Hash for HashableField<Fp> {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: std::hash::Hasher,
+    {
+        state.write_u128(self.0.get_lower_128());
+    }
+}
+
+impl<Fp: FieldExt> From<Fp> for HashableField<Fp> {
+    fn from(v: Fp) -> Self {
+        Self(v)
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct HashTracesSrc<T, Fp: FieldExt> {
+    source: T,
+    deduplicator: std::collections::HashSet<HashableField<Fp>>,
+}
+
+impl<T, Fp: FieldExt> From<T> for HashTracesSrc<T, Fp> {
+    fn from(source: T) -> Self {
+        Self {
+            source,
+            deduplicator: Default::default(),
+        }
+    }
+}
+
+impl<'d, T, Fp> Iterator for HashTracesSrc<T, Fp>
+where
+    T: Iterator<Item = &'d (Fp, Fp, Fp)>,
+    Fp: FieldExt,
+{
+    type Item = &'d (Fp, Fp, Fp);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for i in self.source.by_ref() {
+            let cp_i = HashableField::from(i.2);
+            if self.deduplicator.get(&cp_i).is_none() {
+                self.deduplicator.insert(cp_i);
+                return Some(i);
+            }
+        }
+        None
+    }
+}
 /// test
 #[cfg(test)]
 mod tests {

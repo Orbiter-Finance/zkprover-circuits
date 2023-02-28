@@ -1,15 +1,61 @@
 use std::hash::{self, Hash};
 
 use halo2_proofs::{
-    arithmetic::{FieldExt, Field},
+    arithmetic::{Field, FieldExt},
     circuit::{Layouter, SimpleFloorPlanner},
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Expression, VirtualCells}, dev::metadata::VirtualCell, poly::Rotation,
+    dev::metadata::VirtualCell,
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Expression, VirtualCells},
+    poly::Rotation,
 };
 
-use crate::operation::AccountOp;
+use crate::operation::{Account, AccountOp, HashTracesSrc};
 use hash_circuit::{
     hash::Hashable, hash::PoseidonHashChip, hash::PoseidonHashConfig, hash::PoseidonHashTable,
 };
+
+#[derive(Clone, Default)]
+pub struct StateTrie<Fp: FieldExt> {
+    start_root: Fp,
+    final_root: Fp,
+    ops: Vec<AccountOp<Fp>>,
+}
+
+impl<Fp: FieldExt> StateTrie<Fp> {
+    /// Obtain the wrapped operation sequence
+    pub fn get_ops(&self) -> &[AccountOp<Fp>] {
+        &self.ops
+    }
+
+    /// Add an op into the circuit data
+    pub fn add_op(&mut self, op: AccountOp<Fp>) {
+        if self.ops.is_empty() {
+            self.start_root = op.account_root_before()
+        } else {
+            assert_eq!(self.final_root, op.account_root_before());
+        }
+        self.final_root = op.account_root_after();
+        self.ops.push(op)
+    }
+
+    /// Add an op array
+    pub fn add_ops(&mut self, ops: impl IntoIterator<Item = AccountOp<Fp>>) {
+        for op in ops {
+            self.add_op(op)
+        }
+    }
+
+    /// Obtain the final root
+    pub fn final_root(&self) -> Fp {
+        self.final_root
+    }
+}
+
+// impl<Fp: Hashable> StateTrie<Fp> {
+
+//     pub fn hash_traces(&self) -> impl Iteratro<Item = &(Fp, Fp, Fp) + Clone {
+//         HashTracesSrc::from(self.ops.iter().flat_map(|op| op.hash_traces()))
+//     }
+// }
 
 /// StateTrie
 #[derive(Clone, Default, Debug)]
@@ -27,7 +73,8 @@ mod tests {
     use std::hash::Hash;
 
     use crate::{
-        test_utils::{hash_str_to_fp, Fp}, gadgets::hash_util::HashCircuit,
+        gadgets::hash_util::HashCircuit,
+        test_utils::{hash_str_to_fp, Fp},
     };
     use halo2_proofs::{dev::MockProver, halo2curves::group::ff::PrimeField};
     use hash_circuit::{
