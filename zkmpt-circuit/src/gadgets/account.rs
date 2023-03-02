@@ -180,7 +180,7 @@ impl AccountGadget {
             ]
         });
 
-        // constraint new_nonce = old_nonce + 1
+        // constrain new_nonce = old_nonce + 1
         meta.create_gate("nonce constraint", |meta| {
             let s_enable = meta.query_selector(sel) * meta.query_advice(s_enable, Rotation::cur());
             let old_nonce = Expression::Constant(Fp::zero());
@@ -191,6 +191,8 @@ impl AccountGadget {
                     * (new_nonce - old_nonce - Expression::Constant(Fp::one()))
             ]
         });
+
+        // constrain 
 
         // constraint padding row
         meta.create_gate("padding row", |meta| {
@@ -293,6 +295,8 @@ impl AccountGadget {
             let data_delta = match index {
                 0 => [data.0.nonce - data.1.nonce, Fp::zero()],
                 1 => [data.0.gas_balance - data.1.gas_balance, Fp::zero()],
+                2 => [data.0.recrusive_tx_hash - data.1.recrusive_tx_hash, Fp::zero()],
+                3 => [data.0.state_root - data.1.state_root, Fp::zero()],
                 _ => unreachable!("no such row number"),
             };
 
@@ -423,7 +427,7 @@ impl<'d, Fp: FieldExt> AccountChip<'d, Fp> {
             let s_enable = meta.query_selector(sel) * meta.query_advice(s_enable, Rotation::cur());
             let exported_equal1 = meta.query_advice(intermediate_2, Rotation::cur())
                 - meta.query_advice(acc_data_fields, Rotation::prev());
-                let exported_equal2 = meta.query_advice(intermediate_2, Rotation::cur())
+            let exported_equal2 = meta.query_advice(intermediate_2, Rotation::cur())
                 - meta.query_advice(acc_data_fields, Rotation::next());
 
             // equalities in the circuit
