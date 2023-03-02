@@ -1,9 +1,15 @@
 pub use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::{halo2curves::group::ff::PrimeField, arithmetic::Field};
+use halo2_proofs::{arithmetic::Field, halo2curves::{group::ff::PrimeField, FieldExt}};
 use num_traits::Num;
 use rand::{random, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::{i64, str::FromStr};
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref GAMMA: Fp = Fp::random(rand_gen([101u8; 32]));
+    pub static ref TEST_RANDOMNESS: Fp = Fp::from_u128(0x10000000000000000u128).square();
+}
 
 use num_bigint::BigInt;
 
@@ -28,4 +34,8 @@ pub fn rand_bytes_array<const N: usize>() -> [u8; N] {
 pub fn rand_fp() -> Fp {
     let arr = rand_bytes_array::<32>();
     Fp::random(rand_gen(arr))
+}
+
+pub fn mock_hash(a: &Fp, b: &Fp) -> Fp {
+    (a + *GAMMA) * (b + *GAMMA)
 }

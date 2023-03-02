@@ -8,7 +8,8 @@
       "pubKey": "0x9c5a1607a0719e201f7325c41c2dc857a16eadd309bab5d1d93c7e1d15204920",
       "txHash": "0x41527e5c9713e748e4d0d28d270071a7710acffa8a2221605f6162a185de3416",
       "txSignature": "0x9c5a1607a0719e201f7325c41c2dc857a16eadd309bab5d1d93c7e1d15204920",
-      "txGas": "",
+      "depositFee": 1000,
+      "maxFee": 500,
       "mptRootUpdate": {
         "oldRoot": "0x41527e5c9713e748e4d0d28d270071a7710acffa8a2221605f6162a185de3416",
         "newRoot": "0x41527e5c9713e748e4d0d28d270071a7710acffa8a2221605f6162a185de3416"
