@@ -16,8 +16,34 @@ pub(crate) struct MPTOpTables(
     [TableColumn; 3], // op rules
 );
 
+/// The defination is greped from state-circuit
+#[derive(Clone, Copy, Debug)]
+pub enum MPTProofType {
+    /// nonce
+    NonceChanged = 1,
+    /// balance
+    BalanceChanged,
+    /// codehash updated
+    CodeHashExists,
+    /// non exist proof for account
+    AccountDoesNotExist,
+    /// account destructed
+    AccountDestructed,
+    /// storage
+    StorageChanged,
+    /// non exist proof for storage
+    StorageDoesNotExist,
+    /// poseidon code hash
+    PoseidonCodeHashExists,
+    /// code length, in bytes
+    CodeSizeExists,
+}
+
+/// Entry for mpt table
+
 
 impl MPTOpTables {
+
     pub fn configure_create<Fp: Field>(meta: &mut ConstraintSystem<Fp>) -> Self {
         Self(
             meta.lookup_table_column(),
@@ -92,3 +118,5 @@ impl MPTOpTables {
         )
     }
 }
+
+
