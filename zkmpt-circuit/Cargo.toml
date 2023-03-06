@@ -1,5 +1,5 @@
 [package]
-name = "halo2-mpt-circuits"
+name = "zkprover-mpt-circuits"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,6 +13,7 @@ lazy_static = "1.4.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 num-bigint = "0.4"
+num-traits = "0.2.15"
 hex = "0.4"
 thiserror = "1.0"
 
@@ -31,7 +32,7 @@ subtle = "2"
 
 [[bin]]
 name = "integration-test"
-path = "integration-tests/src/main.rs"
+path = "integration-test/src/main.rs"
 
 [profile.test]
 opt-level = 3

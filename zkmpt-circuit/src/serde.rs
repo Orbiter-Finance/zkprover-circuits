@@ -1,32 +1,12 @@
 //! deserialize data for operations
-//!
-use super::HashType;
 use num_bigint::BigUint;
 use serde::{
     de::{Deserializer, Error},
     ser::Serializer,
     Deserialize, Serialize,
 };
-use std::fmt::{Debug, Display, Formatter};
 
-impl<'de> Deserialize<'de> for HashType {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        match <&'de str>::deserialize(deserializer)? {
-            "empty" => Ok(HashType::Empty),
-            "middle" => Ok(HashType::Middle),
-            "leafExt" => Ok(HashType::LeafExt),
-            "leafExtFinal" => Ok(HashType::LeafExtFinal),
-            "leaf" => Ok(HashType::Leaf),
-            s => Err(D::Error::unknown_variant(
-                s,
-                &["empty", "middle", "leafExt", "leafExtFinal", "leaf"],
-            )),
-        }
-    }
-}
+use std::fmt::{Debug, Display, Formatter};
 
 impl<const LEN: usize> Serialize for HexBytes<LEN> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -102,67 +82,6 @@ pub enum RowDeError {
     BigInt,
 }
 
-#[derive(Debug, Deserialize)]
-/// Row type
-pub struct Row {
-    /// maker
-    pub is_first: bool,
-    /// siblings
-    pub sib: Hash,
-    /// (aux col, should not used)
-    pub depth: usize,
-    /// path: bit for mid and int for leaf
-    #[serde(deserialize_with = "de_uint_bin")]
-    pub path: BigUint,
-    /// (aux col, should not used)
-    #[serde(deserialize_with = "de_uint_bin")]
-    pub path_acc: BigUint,
-    /// hash type (before op)
-    pub old_hash_type: HashType,
-    /// hashs in path (before op)
-    pub old_hash: Hash,
-    /// values in path (before op)
-    pub old_value: Hash,
-    /// hash type (after op)
-    pub new_hash_type: HashType,
-    /// hashs in path (after op)
-    pub new_hash: Hash,
-    /// values in path (after op)
-    pub new_value: Hash,
-    /// the key of leaf
-    pub key: Hash,
-    /// (aux col, should not used)
-    pub new_root: Hash,
-}
-
-impl Row {
-    /// parse rows from JSON array with mutiple records
-    pub fn from_lines(lines: &str) -> Result<Vec<Row>, serde_json::Error> {
-        lines.trim().split('\n').map(serde_json::from_str).collect()
-    }
-
-    /// fold flattern rows into ops array, each ops include serveral rows
-    /// and start with an row whose is_first is true
-    pub fn fold_flattern_rows(rows: Vec<Row>) -> Vec<Vec<Row>> {
-        let mut out = Vec::new();
-        let mut current = Vec::new();
-
-        for row in rows {
-            if row.is_first && !current.is_empty() {
-                out.push(current);
-                current = Vec::new();
-            }
-            current.push(row);
-        }
-
-        if !current.is_empty() {
-            out.push(current);
-        }
-
-        out
-    }
-}
-
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 /// HexBytes struct encoding to "0x...."
 pub struct HexBytes<const LEN: usize>(pub [u8; LEN]);
@@ -173,7 +92,7 @@ impl<const LEN: usize> HexBytes<LEN> {
         hex::encode(self.0)
     }
 
-    /// pick the inner content for read
+    /// pick the inner cotent for read
     pub fn start_read(&self) -> &[u8] {
         &self.0[..]
     }
@@ -241,6 +160,36 @@ pub type Hash = HexBytes<32>;
 /// Address expressed by 20bytes eth address
 pub type Address = HexBytes<20>;
 
+///
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
+pub struct MptRootUpdate {
+    pub old_root: Hash,
+    pub new_root: Hash,
+}
+
+///
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
+pub struct AccountStateData {
+    pub nonce: u64,
+    #[serde(deserialize_with = "de_uint_hex", serialize_with = "se_uint_hex")]
+    pub gas_balance: BigUint,
+
+    /// Recrusive hash of the account tx list hashes like: hash(n) = hash(txN,
+    /// hash(n-1))
+    pub pre_recrusive_tx_hash: Hash,
+    pub tx_hash: Hash,
+}
+
+///
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
+pub struct AccountUpdate {
+    pub old_account_state: Option<AccountStateData>,
+    pub new_account_state: Option<AccountStateData>,
+}
+
 /// struct in SMTTrace
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SMTNode {
@@ -249,16 +198,10 @@ pub struct SMTNode {
     /// sibling
     pub sibling: Hash,
 }
-
-/// struct in SMTTrace
+///
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
-pub struct SMTPath {
-    /// root
-    pub root: Hash,
-    /// leaf
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub leaf: Option<SMTNode>,
+pub struct AccountPath {
     /// path
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub path: Vec<SMTNode>,
@@ -267,54 +210,35 @@ pub struct SMTPath {
     pub path_part: BigUint,
 }
 
-/// struct in SMTTrace
+///
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
-pub struct AccountData {
-    /// nonce
-    pub nonce: u64,
-    /// balance
-    #[serde(deserialize_with = "de_uint_hex", serialize_with = "se_uint_hex")]
-    pub balance: BigUint,
-    /// codeHash
-    #[serde(
-        default,
-        deserialize_with = "de_uint_hex",
-        serialize_with = "se_uint_hex_fixed32"
-    )]
-    pub code_hash: BigUint,
-}
-
-/// struct in SMTTrace
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct StateData {
-    /// the key of storage
-    pub key: HexBytes<32>,
-    /// the value of storage
-    pub value: HexBytes<32>,
-}
-
-/// represent an updating on SMT, can convert into AccountOp
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
-pub struct SMTTrace {
+pub struct MPTTransTrace {
     /// Address for the trace
     pub address: Address,
+
     /// key of account (hash of address)
     pub account_key: Hash,
-    /// SMTPath for account
-    pub account_path: [SMTPath; 2],
-    /// update on accountData
-    pub account_update: [Option<AccountData>; 2],
-    /// SMTPath for storage,
-    pub state_path: [Option<SMTPath>; 2],
-    /// common State Root, if no change on storage part
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub common_state_root: Option<Hash>,
-    /// key of address (hash of storage address)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub state_key: Option<Hash>,
-    /// update on storage
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub state_update: Option<[Option<StateData>; 2]>,
+    /// pub key of the account
+    pub pub_key: Hash,
+
+    /// hash of the use Tx
+    pub tx_hash: Hash,
+
+    pub tx_signature: Hash,
+
+    pub mpt_root_update: Option<MptRootUpdate>,
+
+    pub account_update: Option<AccountUpdate>,
+
+    pub account_path: Vec<Option<AccountPath>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
+pub struct BlockResult {
+    pub start_mpt_root: Hash,
+    pub end_mpt_root: Hash,
+    // #[serde(rename = "mptwitness", default)]
+    pub mpt_trans_trace: Vec<MPTTransTrace>,
 }
