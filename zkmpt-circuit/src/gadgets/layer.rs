@@ -20,7 +20,7 @@ pub(crate) struct LayerGadget {
     new_root_index: Column<Advice>,
     address_index: Column<Advice>,
     op_delta_aux: Column<Advice>,
-    control_table: [halo2_proofs::plonk::TableColumn; _],
+    control_table: [halo2_proofs::plonk::TableColumn; 5],
 }
 
 impl LayerGadget {
