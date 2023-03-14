@@ -6,8 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hash-circuit = { package = "poseidon-circuit", git = "https://github.com/scroll-tech/poseidon-circuit.git", branch = "scroll-dev-0201"}
+hash-circuit = { package = "poseidon-circuit", git = "https://github.com/ZeroKPunk/poseidon-circuit.git", branch = "scroll-dev-0215"}
 halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_02_02" }
+halo2_gadgets = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_02_02" }
+
 rand = "0.8"
 lazy_static = "1.4.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -18,6 +20,9 @@ hex = "0.4"
 thiserror = "1.0"
 itertools = "0.10.3"
 bytes = "1.4.0"
+
+# [patch."https://github.com/privacy-scaling-explorations/halo2.git"]
+# halo2_proofs = { git = "https://github.com/scroll-tech/halo2.git", branch = "scroll-dev-1220" }
 
 [dependencies.snark-verifier]
 git = "https://github.com/privacy-scaling-explorations/snark-verifier"

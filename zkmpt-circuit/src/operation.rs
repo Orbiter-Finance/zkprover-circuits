@@ -5,6 +5,7 @@ use halo2_proofs::arithmetic::FieldExt;
 use hash_circuit::{hash, Hashable};
 use num_bigint::BigInt;
 use num_traits::Num;
+pub use halo2_proofs::halo2curves::bn256::Fr;
 
 /// Represent an account operation in MPT
 #[derive(Clone, Debug, Default)]
@@ -85,7 +86,6 @@ impl<Fp: FieldExt> Account<Fp> {
         // println!("account_key {account_key:?}");
 
         assert_eq!(account_key, self.account_key);
-
 
         self.account_key = hasher(&self.address, &Fp::zero());
         self.recrusive_tx_hash = hasher(&self.pre_recrusive_tx_hash, &self.tx_hash);
@@ -283,7 +283,6 @@ impl<'d, Fp: Hashable> TryFrom<&'d serde::MPTTransTrace> for AccountOp<Fp> {
         })
     }
 }
-
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct HashableField<Fp: FieldExt>(Fp);

@@ -10,14 +10,14 @@
 #[cfg(test)]
 mod test_utils;
 
-// pub use hash_circuit::{hash, poseidon};
+pub use hash_circuit::{hash, poseidon};
 
-// pub mod operation;
+pub mod operation;
 
 // pub mod state_trie;
 
-// pub mod gadgets;
+pub mod gadgets;
 
-// pub mod serde;
+pub mod serde;
 
 pub mod verifier;

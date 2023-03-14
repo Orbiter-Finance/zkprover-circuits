@@ -230,11 +230,11 @@ mod tests {
 
         let hash_result = <Fp as Hashable>::hash([m1, m2]);
         println!("m1 {m1:?} m2 {m2:?} hash_result {hash_result:?}");
-        let hashes = &[&(m1, m2, hash_result), &(m1, m2, hash_result)];
+        let hashes = &[&(m1, m2, hash_result)];
         let hash_circuit = HashCircuit::new(hash_rows, hashes);
         let prover_hash = MockProver::<Fp>::run(k, &hash_circuit, vec![]).unwrap();
 
-        // assert_eq!(prover_hash.verify(), Ok(()));
+        assert_eq!(prover_hash.verify(), Ok(()));
     }
 
     #[test]
