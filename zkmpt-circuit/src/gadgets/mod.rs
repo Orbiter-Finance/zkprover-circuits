@@ -6,3 +6,5 @@ pub mod padding;
 pub mod table_util;
 
 pub mod poseidon_hash;
+
+pub mod ecsdsa;
