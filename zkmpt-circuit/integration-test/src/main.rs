@@ -3,7 +3,7 @@ use std::io::Read;
 pub use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use hash_circuit::Hashable;
 use zkprover_mpt_circuits::{serde::{BlockResult, MPTTransTrace}, operation::AccountOp};
-// use zkprover_mpt_circuits::{state_trie::StateTrie};
+use zkprover_mpt_circuits::{state_trie::StateTrie};
 use serde::Deserialize;
 
 
@@ -19,10 +19,10 @@ fn main() {
     let end_mpt_root = block_result.end_mpt_root;
 
     let ops: Vec<AccountOp<Fp>> = traces.iter().map(|tr| tr.try_into().unwrap()).collect();
-    println!("ops {ops:?}");
+    // println!("ops {ops:?}");
 
-    // let mut data: StateTrie<Fp> = Default::default();
-    // data.add_ops(ops);
+    let mut data: StateTrie<Fp> = Default::default();
+    data.add_ops(ops);
 
     // let final_root = data.final_root();
     // println!("final_root {final_root:?}");
