@@ -136,14 +136,61 @@ impl<E: CurveAffine, N: FieldExt> Circuit<N> for CircuitEcdsaVerify<E, N> {
 }
 
 #[cfg(test)]
+#[allow(non_snake_case)]
 mod tests {
     use halo2_proofs::{arithmetic::{CurveAffine, FieldExt, Field}, circuit::Value};
     use maingate::{fe_to_big, big_to_fe, mock_prover_verify};
-    use rand::rngs::OsRng;
+    use rand::{rngs::OsRng, thread_rng};
     use halo2_proofs::halo2curves::group::{Curve, Group};
+    // use crate::{test_utils::{Fp}};
+    use halo2_proofs::halo2curves::secp256k1::Fp;
 
     use crate::gadgets::ecsdsa::CircuitEcdsaVerify;
+    use ethers::{
+        signers::{LocalWallet, Signer, Wallet}, 
+        prelude::k256::{ecdsa::SigningKey},
+        utils::hash_message
+    };
+    use k256::{
+        ProjectivePoint, Scalar, elliptic_curve::{PrimeField, ops::MulByGenerator}
+    };
+    use hex_literal::hex;
 
+    macro_rules! aw {
+        ($e:expr) => {
+            tokio_test::block_on($e)
+        };
+      }
+
+    #[test]
+    fn test_affine() {
+        Fp::from(1);
+    }
+
+    #[actix::test]
+    async fn test_signature() {
+        // let wallet = LocalWallet::new(&mut thread_rng());
+
+        let wallet: Wallet<SigningKey> =
+            "0000000000000000000000000000000000000000000000000000000000000001".parse().unwrap();
+        println!("wallet address {:?}", wallet.address());
+
+        // Declare the message you want to sign.
+        let message = "Some data";
+
+        // sign message from your wallet and print out signature produced.
+        let signature = wallet.sign_message(message).await.unwrap();
+        println!("Produced signature {signature}");
+        let hash = hash_message(message);
+        println!("Produced hash {:?}", hash);
+
+        // verify the signature produced from your wallet.
+        signature.verify(message, wallet.address()).unwrap();
+        println!("Verified signature produced by {:?}!", wallet.address());
+    }
+
+    
+   
 
     #[test]
     fn test_ecdsa_verifier() {
@@ -156,12 +203,21 @@ mod tests {
             let g = C::generator();
 
             // Generate a key pair
+           
             let sk = <C as CurveAffine>::ScalarExt::random(OsRng);
+
+            // let sk_str = hex!("AA5E28D6A97A2479A65527F7290311A3624D4CC0FA1578598EE3C2613BF99522");
+            // let s = Scalar::from_repr(sk_str.into()).unwrap();
+            // let sk = ProjectivePoint::mul_by_generator(&s);
+            // let sk = <C as CurveAffine>::ScalarExt::mul_by_generator(s);
             let public_key = (g * sk).to_affine();
 
             // Generate a valid signature
             // Suppose `m_hash` is the message hash
             let msg_hash = <C as CurveAffine>::ScalarExt::random(OsRng);
+            // 0x1da44b586eb0729ff70a73c326926f6ed5a25f5b056e7f47fbc6e58d86871655
+            // let msg_hash = <C as CurveAffine>::ScalarExt::from();
+            println!("msg_hash {:?}", msg_hash);
 
             // Draw arandomness
             let k = <C as CurveAffine>::ScalarExt::random(OsRng);

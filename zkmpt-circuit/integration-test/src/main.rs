@@ -24,7 +24,7 @@ fn main() {
     let mut data: StateTrie<Fp> = Default::default();
     data.add_ops(ops);
 
-    // let final_root = data.final_root();
-    // println!("final_root {final_root:?}");
-    // println!("mpt_trans_trace {traces:?}");
+    let final_root = data.final_root();
+    println!("final_root {final_root:?}");
+    println!("mpt_trans_trace {traces:?}");
 }

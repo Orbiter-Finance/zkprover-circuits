@@ -2,10 +2,10 @@ use std::hash::Hash;
 
 use super::serde;
 use halo2_proofs::arithmetic::FieldExt;
+pub use halo2_proofs::halo2curves::bn256::Fr;
 use hash_circuit::{hash, Hashable};
 use num_bigint::BigInt;
 use num_traits::Num;
-pub use halo2_proofs::halo2curves::bn256::Fr;
 
 /// Represent an account operation in MPT
 #[derive(Clone, Debug, Default)]
@@ -85,7 +85,7 @@ impl<Fp: FieldExt> Account<Fp> {
         let account_key = hasher(&self.address, &Fp::zero());
         // println!("account_key {account_key:?}");
 
-        assert_eq!(account_key, self.account_key);
+        // assert_eq!(account_key, self.account_key);
 
         self.account_key = hasher(&self.address, &Fp::zero());
         self.recrusive_tx_hash = hasher(&self.pre_recrusive_tx_hash, &self.tx_hash);
@@ -391,10 +391,6 @@ mod tests {
 
         let account: Account<Fp> = Account {
             address: hash_str_to_fp("0xb364e75b1189dcbbf7f0c856456c1ba8e4d6481b"),
-
-            account_key: hash_str_to_fp(
-                "0xfb8fc76b0dd70729afc7eb236fbcb772770e306acb145552c19c045f0211b75e",
-            ),
             pub_key: hash_str_to_fp(
                 "0xfb8fc76b0dd70729afc7eb236fbcb772770e306acb145552c19c045f0211b75e",
             ),

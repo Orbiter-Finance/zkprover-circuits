@@ -21,3 +21,5 @@ pub mod gadgets;
 pub mod serde;
 
 pub mod verifier;
+
+pub mod zkProver;
