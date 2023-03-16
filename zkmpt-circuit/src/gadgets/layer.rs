@@ -1,5 +1,10 @@
-use halo2_proofs::{plonk::{Selector, Advice, Column, ConstraintSystem, Expression, Error}, halo2curves::FieldExt, poly::Rotation, circuit::{Region, Value}};
-
+use ethers::prelude::k256::elliptic_curve::ops::Invert;
+use halo2_proofs::{
+    circuit::{Region, Value},
+    halo2curves::FieldExt,
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
+    poly::Rotation,
+};
 
 #[derive(Clone, Debug)]
 pub(crate) struct LayerGadget {
@@ -24,7 +29,6 @@ pub(crate) struct LayerGadget {
 }
 
 impl LayerGadget {
-
     pub fn exported_cols(&self, step: u32) -> [Column<Advice>; 8] {
         [
             self.ctrl_type,
@@ -61,7 +65,6 @@ impl LayerGadget {
         required_cols: usize,
         minium_ctrl_types: usize,
     ) -> Self {
-
         let s_stepflags: Vec<_> = (0..steps).map(|_| meta.advice_column()).collect();
         let free_cols: Vec<_> = (0..required_cols).map(|_| meta.advice_column()).collect();
         let s_ctrl_type: Vec<_> = (0..minium_ctrl_types)
@@ -126,26 +129,23 @@ impl LayerGadget {
             vec![sel * Expression::Constant(Fp::zero())]
         });
 
-          // the main lookup for constrainting row layout
+        // the main lookup for constrainting row layout
         // lookup opened under 2 conditions:
         // 1. series has zero-delta and op_type has non-zero delta
         // 2. series has non-zero-delta
         // under these condition the transition of op_type and ctrl_type would be
         // lookup from control_table
         meta.lookup("layer intra-block border rule", |meta| {
-            // condition 1 (intra-block transition) is only actived when series has not change
-            vec![
-                (Expression::Constant(Fp::zero()), control_table[0]),
-            ]
+            // condition 1 (intra-block transition) is only actived when series has not
+            // change
+            vec![(Expression::Constant(Fp::zero()), control_table[0])]
         });
 
         meta.lookup("layer intra-block border rule", |meta| {
-            // condition 1 (intra-block transition) is only actived when series has not change
-            vec![
-                (Expression::Constant(Fp::zero()), control_table[0]),
-            ]
+            // condition 1 (intra-block transition) is only actived when series has not
+            // change
+            vec![(Expression::Constant(Fp::zero()), control_table[0])]
         });
-
 
         Self {
             sel,
@@ -169,30 +169,33 @@ impl LayerGadget {
         }
     }
 
-    
-    // an unique transition (start_op_code, 0) -> (<op type>, <ctrl type>) would be put in inter-op-block table
-    // automatically to specify how the circuit starts
+    // an unique transition (start_op_code, 0) -> (<op type>, <ctrl type>) would be
+    // put in inter-op-block table automatically to specify how the circuit
+    // starts
     pub fn start_op_code(&self) -> u32 {
         self.s_stepflags.len() as u32
     }
-    // LayerGadget must be first assigned, with other gadgets start from the offset it has returned
+
+    /// LayerGadget must be first assigned, with other gadgets start from the
+    /// offset it has returned
     pub fn assign<Fp: FieldExt>(
         &self,
         region: &mut Region<'_, Fp>,
         max_rows: usize,
-        init_root: Fp
+        init_root: Fp,
     ) -> Result<usize, Error> {
-         // current we flush the first row, and start other circuits's assignation from row 1
-         self.free_cols.iter().try_for_each(|col| {
+        // current we flush the first row, and start other circuits's assignation from
+        // row 1
+        self.free_cols.iter().try_for_each(|col| {
             region
                 .assign_advice(|| "flushing", *col, 0, || Value::known(Fp::zero()))
                 .map(|_| ())
-         })?;
-         self.s_stepflags.iter().try_for_each(|col| {
+        })?;
+        self.s_stepflags.iter().try_for_each(|col| {
             region
                 .assign_advice(|| "flushing", *col, 0, || Value::known(Fp::zero()))
                 .map(|_| ())
-         })?;
+        })?;
 
         region.assign_advice_from_constant(|| "init series", self.series, 0, Fp::zero())?;
         region.assign_advice_from_constant(|| "init series", self.series, 1, Fp::one())?;
@@ -249,5 +252,87 @@ impl LayerGadget {
 
         Ok(1)
     }
-    
+
+    /// pace has to be called before a working gadget is assigned on the specified offset, the rows
+    /// that working gadget would occpuy, and the result of the new root which gadget has output,
+    /// must be known before
+    pub fn pace_op<Fp: FieldExt> (
+        &self,
+        region: &mut Region<'_, Fp>,
+        offset: usize,
+        op_type: (u32, u32), //op before -> op now
+        rows: usize,
+    ) -> Result<(), Error>{
+        let mut prev_op = op_type.0;
+        let op_delta = Fp::from(op_type.1 as u64) - Fp::from(op_type.0 as u64);
+        for offset in offset..(offset + rows) {
+            region.assign_advice(
+                || "op type", 
+                self.op_type, offset, 
+                || Value::known(Fp::from(op_type.1 as u64)),
+            )?;
+            region.assign_advice(
+                || "op delta aux",
+                self.op_delta_aux,
+                offset,
+                || {
+                    Value::known(if prev_op == op_type.1 {
+                        Fp::zero()
+                    } else {
+                        op_delta.invert().unwrap()
+                    }) 
+                }
+            )?;
+            // flush all cols to avoid unassigned error
+            self.free_cols.iter().try_for_each(|col| {
+                region
+                    .assign_advice(
+                        || "flushing free", 
+                        *col, 
+                        offset, 
+                        || Value::known(Fp::zero())
+                    )
+                    .map(|_|())
+            })?;
+            // flush all cols to avoid unassigned error
+            self.s_ctrl_type.iter().try_for_each(|col| {
+                region
+                    .assign_advice(
+                        || "flushing op type flag",
+                        *col,
+                        offset,
+                        || Value::known(Fp::zero()),
+                    )
+                    .map(|_| ())
+            })?;
+            [
+                self.data_0,
+                self.data_1,
+                self.data_2,
+                self.data_0_ext,
+                self.data_1_ext,
+                self.data_2_ext,
+            ]
+            .iter()
+            .try_for_each(|col| {
+                region
+                    .assign_advice(
+                        || "flushing exported",
+                        *col,
+                        offset,
+                        || Value::known(Fp::zero()),
+                    )
+                    .map(|_| ())
+            })?;
+
+            self.s_stepflags.iter().try_for_each(|col| {
+                region
+                    .assign_advice(|| "flushing", *col, offset, || Value::known(Fp::zero()))
+                    .map(|_| ())
+            })?;
+
+            prev_op = op_type.1;
+        }
+        Ok(())
+    }
 }

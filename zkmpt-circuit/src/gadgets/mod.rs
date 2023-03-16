@@ -8,3 +8,5 @@ pub mod table_util;
 pub mod poseidon_hash;
 
 pub mod ecsdsa;
+
+pub mod mpt;

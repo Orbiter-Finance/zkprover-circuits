@@ -67,7 +67,7 @@ impl AccountGadget {
         tables: table_util::MPTOpTables,
         hash_tbl: hash_util::HashTable,
     ) -> Self {
-        assert!(free.len() >= 4, "require at least 4 free cols");
+        assert!(free.len() >= 6, "require at least 6 free cols");
         let s_enable = exported[1];
         let ctrl_type = exported[0];
         let data_old = exported[2];

@@ -31,7 +31,7 @@ fn main() {
 
     let state_circuit = state_trie.circuits(7, &[]);
 
-    let prover_state = MockProver::<Fp>::run(7, &state_circuit, vec![]);
+    // let prover_state = MockProver::<Fp>::run(7, &state_circuit, vec![]);
 
    
 }

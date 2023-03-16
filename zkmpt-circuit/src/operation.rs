@@ -1,15 +1,21 @@
-use std::hash::Hash;
+use std::{hash::Hash, cmp::Ordering};
+
+use crate::gadgets::mpt::{SingleOp, MPTPath};
 
 use super::serde;
 use halo2_proofs::arithmetic::FieldExt;
 pub use halo2_proofs::halo2curves::bn256::Fr;
 use hash_circuit::{hash, Hashable};
-use num_bigint::BigInt;
+use num_bigint::{BigInt, BigUint};
 use num_traits::Num;
 
 /// Represent an account operation in MPT
 #[derive(Clone, Debug, Default)]
 pub struct AccountOp<Fp: FieldExt> {
+    /// the operation on the account trie (first layer)
+    // pub acc_trie: SingleOp<Fp>,
+    // /// the operation on the state trie (second layer)
+    // pub state_trie: Option<SingleOp<Fp>>,
     /// the state before updating in account
     pub account_before: Account<Fp>,
     /// the state after updating in account
@@ -25,6 +31,13 @@ impl<Fp: FieldExt> AccountOp<Fp> {
     pub fn account_root_after(&self) -> Fp {
         self.account_after.state_root
     }
+
+    /// indicate rows would take in the account trie part
+    pub fn use_rows_trie_account(&self) -> usize {
+        // TODO: should update SingleOp
+        10
+    }
+
 }
 
 impl<Fp: Hashable> AccountOp<Fp> {
@@ -257,10 +270,192 @@ impl<'d, Fp: Hashable>
     }
 }
 
+/// parse Trace data into MPTPath and additional data (siblings and path)
+/// MptPath Siblings Path
+struct SMTPathParse<Fp: FieldExt>(MPTPath<Fp>, Vec<Fp>, Vec<Fp>);
+
+impl<'d, Fp: Hashable> TryFrom<&'d serde::SMTPath> for SMTPathParse<Fp> {
+    type Error = TraceError;
+    fn try_from(path_trace: &'d serde::SMTPath) -> Result<Self, Self::Error> {
+        let mut siblings: Vec<Fp> = Vec::new();
+        for n in &path_trace.path {
+            let s = Fp::from_bytes_wide(&n.sibling.cast());
+            siblings.push(s);
+        }
+
+        let mut path_bits: Vec<bool> = Vec::new();
+        let mut path: Vec<Fp> = Vec::new();
+
+        for i in 0..siblings.len() {
+            let bit = (BigUint::from(1u64) << i) & &path_trace.path_part != BigUint::from(0u64);
+            path_bits.push(bit);
+            path.push(if bit { Fp::one() } else { Fp::zero() });
+        }
+
+        let mut key = Fp::zero();
+        let mut leaf = None;
+        // notice when there is no leaf node, providing 0 key
+        if let Some(leaf_node) = &path_trace.leaf {
+            key = Fp::from_bytes_wide(&leaf_node.sibling.cast());
+            leaf = Some(Fp::from_bytes_wide(&leaf_node.value.cast()));
+        }
+
+        let mpt_path = MPTPath::create(&path_bits, &siblings, key, leaf);
+        // sanity check
+        let root = Fp::from_bytes_wide(&path_trace.root.cast());
+        assert_eq!(root, mpt_path.root());
+
+        Ok(SMTPathParse(mpt_path, siblings, path))
+    }
+}
+
+impl<'d, Fp: Hashable> TryFrom<(&'d serde::SMTPath, &'d serde::SMTPath, serde::Hash)>
+    for SingleOp<Fp>
+{
+    type Error = TraceError;
+    fn try_from(
+        traces: (&'d serde::SMTPath, &'d serde::SMTPath, serde::Hash),
+    ) -> Result<Self, Self::Error> {
+        let (before, after, ref_key) = traces;
+
+        let key = Fp::from_bytes_wide(&ref_key.cast());
+        let before_parsed: SMTPathParse<Fp> = before.try_into()?;
+        let after_parsed: SMTPathParse<Fp> = after.try_into()?;
+        let mut old = before_parsed.0;
+        let mut new = after_parsed.0;
+
+        // sanity check
+        for (a, b) in after_parsed.1.iter().zip(&before_parsed.1) {
+            if a != b {
+                println!("compare {a:?} {b:?}");
+                return Err(TraceError::DataErr("unmatch siblings".to_string()));
+            }
+        }
+
+        // update for inserting op
+        let (siblings, path, key_immediate) = match old.depth().cmp(&new.depth()) {
+            Ordering::Less => {
+                assert_eq!(new.key(), Some(key));
+                let ext_dist = new.depth() - old.depth();
+                old = old.extend(ext_dist, key);
+                (
+                    after_parsed.1,
+                    after_parsed.2,
+                    new.key_immediate().expect("should be leaf node"),
+                )
+            }
+            Ordering::Greater => {
+                assert_eq!(old.key(), Some(key));
+                let ext_dist = old.depth() - new.depth();
+                new = new.extend(ext_dist, key);
+                (
+                    before_parsed.1,
+                    before_parsed.2,
+                    old.key_immediate().expect("should be leaf node"),
+                )
+            }
+            Ordering::Equal => {
+                if old.key() != Some(key) && new.key() != Some(key) {
+                    assert_eq!(old.key(), new.key());
+                    let mut siblings = before_parsed.1;
+                    let mut path = before_parsed.2;
+
+                    if let Some(another_key) = old.key() {
+                        // we need to make full path extension for both side, manually
+                        let invert_2 = Fp::one().double().invert().unwrap();
+                        let mut k1 = another_key;
+                        let mut k2 = key;
+                        let mut common_prefix_depth: usize = 0;
+                        let shiftr = |fp: Fp| {
+                            if fp.is_odd().unwrap_u8() == 1 {
+                                fp * invert_2 - invert_2
+                            } else {
+                                fp * invert_2
+                            }
+                        };
+                        let mut k2_bit = k2.is_odd().unwrap_u8();
+                        while k1.is_odd().unwrap_u8() == k2_bit {
+                            k1 = shiftr(k1);
+                            k2 = shiftr(k2);
+                            common_prefix_depth += 1;
+                            if common_prefix_depth > path.len() {
+                                path.push(Fp::from(k2_bit as u64));
+                                siblings.push(Fp::zero());
+                            }
+                            assert_ne!(k1, k2);
+                            k2_bit = k2.is_odd().unwrap_u8();
+                        }
+
+                        assert!(common_prefix_depth >= old.depth());
+                        let ext_dist = common_prefix_depth - old.depth() + 1;
+                        let last_node_hash = old.hashes[old.hashes.len() - 2];
+                        old = old.extend(ext_dist, key);
+                        new = new.extend(ext_dist, key);
+
+                        path.push(Fp::from(k2_bit as u64));
+                        siblings.push(last_node_hash);
+                    }
+
+                    // and also insert the required key hash trace
+                    let key_immediate = <Fp as Hashable>::hash([Fp::one(), key]);
+                    old.hash_traces.push((Fp::one(), key, key_immediate));
+
+                    (siblings, path, key_immediate)
+                } else if old.key() == Some(key) {
+                    (
+                        before_parsed.1,
+                        before_parsed.2,
+                        old.key_immediate().expect("should be leaf node"),
+                    )
+                } else {
+                    (
+                        after_parsed.1,
+                        after_parsed.2,
+                        new.key_immediate().expect("should be leaf node"),
+                    )
+                }
+            }
+        };
+
+        let mut key_i = BigUint::from_bytes_le(ref_key.start_read());
+        key_i >>= siblings.len();
+
+        Ok(Self {
+            key,
+            key_residual: bytes_to_fp(key_i.to_bytes_le()).map_err(TraceError::DeErr)?,
+            key_immediate,
+            path,
+            siblings,
+            old,
+            new,
+        })
+    }
+}
+
 impl<'d, Fp: Hashable> TryFrom<&'d serde::MPTTransTrace> for AccountOp<Fp> {
     type Error = TraceError;
 
     fn try_from(trace: &'d serde::MPTTransTrace) -> Result<Self, Self::Error> {
+        // let acc_trie: SingleOp<Fp> = (
+        //    &trace.account_path_update.unwrap().old_account_state_path.unwrap(),
+        //    &trace.account_path_update.unwrap().new_account_state_path.unwrap(),
+        //    trace.account_key
+        // ).try_into().unwrap();
+
+        // let state_trie: Option<SingleOp<Fp>> =
+        //     if trace.state_path[0].is_some() && trace.state_path[1].is_some() {
+        //         Some(
+        //             (
+        //                 trace.state_path[0].as_ref().unwrap(),
+        //                 trace.state_path[1].as_ref().unwrap(),
+        //                 trace.state_key.unwrap(),
+        //             )
+        //                 .try_into()?,
+        //         )
+        //     } else {
+        //         None
+        //     };
+
         let account_update = trace.account_update.as_ref().expect("msg");
         let address = &trace.address;
         let account_key = &trace.account_key;

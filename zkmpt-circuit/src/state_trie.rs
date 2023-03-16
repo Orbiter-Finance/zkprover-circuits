@@ -8,7 +8,15 @@ use halo2_proofs::{
     poly::Rotation,
 };
 
-use crate::{operation::{Account, AccountOp, HashTracesSrc}, gadgets::{table_util::{MPTProofType, self}, account::AccountGadget, hash_util, layer::LayerGadget}};
+use crate::{
+    gadgets::{
+        account::AccountGadget,
+        hash_util,
+        layer::LayerGadget,
+        table_util::{self, MPTProofType},
+    },
+    operation::{Account, AccountOp, HashTracesSrc},
+};
 use hash_circuit::{
     hash::Hashable, hash::PoseidonHashChip, hash::PoseidonHashConfig, hash::PoseidonHashTable,
 };
@@ -19,7 +27,6 @@ lazy_static! {
     static ref RAND_BASE: Mutex<Vec<u64>> = Mutex::new(vec![0x10000u64]);
 }
 
-
 fn get_rand_base() -> u64 {
     *RAND_BASE
         .lock()
@@ -27,7 +34,6 @@ fn get_rand_base() -> u64 {
         .last()
         .expect("always has init element")
 }
-
 
 #[derive(Clone, Default)]
 pub struct StateTrie<Fp: FieldExt> {
@@ -75,16 +81,11 @@ impl<Fp: FieldExt> StateTrie<Fp> {
     }
 }
 
-
 impl<Fp: Hashable> StateTrie<Fp> {
-
     // pub fn hash_traces(&self) -> impl Iteratro<Item = &(Fp, Fp, Fp) + Clone {
     //     HashTracesSrc::from(self.ops.iter().flat_map(|op| op.hash_traces()))
     // }
-
-
 }
-
 
 #[derive(Clone, Debug)]
 pub struct StateTrieConfig {
@@ -95,8 +96,7 @@ pub struct StateTrieConfig {
 }
 
 impl StateTrieConfig {
-
-    /// configure for lite circuit (no mpt table included, for fast testing) 
+    /// configure for lite circuit (no mpt table included, for fast testing)
     pub fn configure_base<Fp: FieldExt>(
         meta: &mut ConstraintSystem<Fp>,
         hash_tbl: [Column<Advice>; 5],
@@ -107,32 +107,27 @@ impl StateTrieConfig {
         let layer = LayerGadget::configure(
             meta, 
             5, 
-            4, 
-            4
-        );
+            std::cmp::max(0, AccountGadget::min_free_cols()), 
+            4);
+
         let account = AccountGadget::configure(
-            meta, 
-            layer.public_sel(), 
-            layer.exported_cols(OP_ACCOUNT).as_slice(), 
-            layer.get_ctrl_type_flags(), 
-            layer.get_free_cols(), 
-            Some(layer.get_address_index()), 
+            meta,
+            layer.public_sel(),
+            layer.exported_cols(OP_ACCOUNT).as_slice(),
+            layer.get_ctrl_type_flags(),
+            layer.get_free_cols(),
+            Some(layer.get_address_index()),
             tables.clone(),
             hash_tbl.clone(),
         );
         Self {
-           layer,
-           account,
-           tables,
-           hash_tbl,
+            layer,
+            account,
+            tables,
+            hash_tbl,
         }
     }
-    /// configure for lite circuit (no mpt table included, for fast testing)
-    // pub fn configure_lite<Fp: FieldExt>(meta: &mut ConstraintSystem<Fp>) -> Self {
-    //     let hash_tbl = [0; 5].map(|_| meta.advice_column());
-    //     Self::configure_base(meta, hash_tbl)
-    // }
-    /// configure for full circuit 
+
     pub fn configure_sub<Fp: FieldExt>(
         meta: &mut ConstraintSystem<Fp>,
         mpt_tbl: [Column<Advice>; 7],
@@ -143,15 +138,39 @@ impl StateTrieConfig {
         lite_cfg
     }
 
-    // pub fn synthesize_core<'d, Fp:Hashable>(
-    //     &self,
-    //     layouter: &mut impl Layouter<Fp>,
-    //     ops: impl Iterator<Item = &'d AccountOp<Fp>> + Clone,
-    //     rows: usize,
-    // ) -> Result<(), Error> {
+    pub fn synthesize_core<'d, Fp:Hashable>(
+        &self,
+        layouter: &mut impl Layouter<Fp>,
+        ops: impl Iterator<Item = &'d AccountOp<Fp>> + Clone,
+        rows: usize,
+    ) -> Result<(), Error> {
+        let start_root = ops
+                            .clone()
+                            .next()
+                            .map(|op| op.account_root_before())
+                            .unwrap_or_else(Fp::zero);
+        layouter.assign_region(
+            || "main", 
+            |mut region| {
+                let mut series: usize = 1;
+                let mut last_op_code = self.layer.start_op_code();
+                let mut start = self.layer.assign(&mut region, rows, start_root).unwrap();
 
-    // }
-
+                // let empty_account = Default::default();
+                for op in ops.clone() {
+                    let block_start = start;
+                    self.layer.pace_op(
+                        &mut region,
+                        start,
+                        (last_op_code, OP_TRIE_ACCOUNT),
+                        op.use_rows_trie_account(),
+                    ).unwrap();
+                    // start = self.account
+                };
+                Ok(())
+            }
+        )
+    }
 }
 
 /// StateTrie
@@ -162,9 +181,10 @@ pub struct StateTrieCircuit<F: FieldExt> {
     /// the user Tx operations in circuits
     pub ops: Vec<AccountOp<F>>,
 
-     /// the mpt table for operations,
+    /// the mpt table for operations,
     /// if NONE, circuit work under lite mode
-    /// no run-time checking for the consistents between ops and generated mpt table
+    /// no run-time checking for the consistents between ops and generated mpt
+    /// table
     pub mpt_table: Vec<MPTProofType>,
 }
 
@@ -179,7 +199,7 @@ impl<Fp: Hashable> StateTrieCircuit<Fp> {
     }
 }
 
-impl<Fp:FieldExt> StateTrieCircuit<Fp> {
+impl<Fp: FieldExt> StateTrieCircuit<Fp> {
     /// create circuit
     pub fn new(calcs: usize, ops: Vec<AccountOp<Fp>>, mpt_table: Vec<MPTProofType>) -> Self {
         Self {
@@ -189,7 +209,6 @@ impl<Fp:FieldExt> StateTrieCircuit<Fp> {
         }
     }
 }
-
 
 impl<Fp: Hashable> Circuit<Fp> for StateTrieCircuit<Fp> {
     type Config = StateTrieConfig;
@@ -208,13 +227,12 @@ impl<Fp: Hashable> Circuit<Fp> for StateTrieCircuit<Fp> {
         let mpt_tbl = [0; 7].map(|_| meta.advice_column());
         let randomness = Expression::Constant(Fp::from(get_rand_base()));
         StateTrieConfig::configure_sub(meta, mpt_tbl, hash_tbl, randomness)
-
     }
 
     fn synthesize(&self, config: Self::Config, layouter: impl Layouter<Fp>) -> Result<(), Error> {
         todo!()
     }
-} 
+}
 
 /// test
 #[cfg(test)]

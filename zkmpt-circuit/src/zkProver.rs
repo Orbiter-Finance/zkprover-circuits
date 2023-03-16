@@ -12,7 +12,7 @@ use crate::{operation::AccountOp, gadgets::table_util::MPTProofType};
 // entry point 
 #[derive(Clone, Debug)]
 pub struct ZkProverCircuitConfig {
-
+    // speck256k1Gadget: 
 }
 
 impl ZkProverCircuitConfig {
