@@ -1,13 +1,19 @@
-use ethers::abi::{AbiDecode, AbiEncode};
-use ethers::prelude::{EthAbiCodec, EthAbiType};
-use ethers::types::{Address, Bytes, TransactionReceipt, H256, U256};
-use ethers::utils::keccak256;
+use ethers::{
+    abi::{AbiDecode, AbiEncode, Param},
+    prelude::{EthAbiCodec, EthAbiType},
+    types::{Address, Bytes, TransactionReceipt, H256, U256, TraceError},
+    utils::keccak256,
+    core::abi::{ decode, ParamType }
+};
+
 use reth_db::table::{Compress, Decode, Decompress, Encode};
 use rustc_hex::FromHexError;
 use serde::{Deserialize, Serialize};
-use std::ops::Deref;
-use std::str::FromStr;
-use std::vec;
+use std::{
+    ops::Deref,
+    str::FromStr,
+    vec,
+};
 
 #[derive(
     Eq, Hash, PartialEq, Debug, Serialize, Deserialize, Clone, Copy, Default, PartialOrd, Ord,
@@ -109,6 +115,49 @@ impl UserOperation {
             signature: Bytes::default(),
         }
     }
+
+}
+
+impl TryFrom<Vec<u8>> for UserOperation {
+    type Error = TraceError;
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        let u8_arr: &[u8] = &value;
+        let _decoded= decode(
+            &vec![
+                ParamType::Address,
+                ParamType::Uint(256),
+                ParamType::Bytes,
+                ParamType::Bytes,
+                ParamType::Uint(256),
+                ParamType::Uint(256),
+                ParamType::Uint(256),
+                ParamType::Uint(256),
+                ParamType::Uint(256),
+                ParamType::Bytes,
+                ParamType::Bytes,
+            ],
+            u8_arr,
+        ).unwrap();
+    // println!("_decode {:?}", _decoded[0]);
+
+    let result = UserOperation { 
+        sender: _decoded[0].clone().into_address().unwrap(), 
+        nonce: _decoded[1].clone().into_uint().unwrap(), 
+        init_code: _decoded[2].clone().into_bytes().unwrap().into(), 
+        call_data: _decoded[3].clone().into_bytes().unwrap().into(), 
+        call_gas_limit: _decoded[4].clone().into_uint().unwrap(), 
+        verification_gas_limit: _decoded[5].clone().into_uint().unwrap(), 
+        pre_verification_gas: _decoded[6].clone().into_uint().unwrap(), 
+        max_fee_per_gas: _decoded[7].clone().into_uint().unwrap(), 
+        max_priority_fee_per_gas: _decoded[8].clone().into_uint().unwrap(), 
+        paymaster_and_data: _decoded[9].clone().into_bytes().unwrap().into(), 
+        signature: _decoded[10].clone().into_bytes().unwrap().into(),
+    };
+
+    Ok(result)
+    }
+    
+
 }
 
 impl Compress for UserOperation {
@@ -238,8 +287,50 @@ pub struct UserOperationGasEstimation {
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
-
+    use hex_literal::hex;
     use super::*;
+
+    #[test]
+    fn test_decode_from() {
+        // https://github.com/rust-ethereum/ethabi/blob/master/ethabi/src/decoder.rs#L327
+        let encode:Vec<u8> = hex!("
+        000000000000000000000000663f3ad617193148711d28f5334ee4ed07016602
+        0000000000000000000000000000000000000000000000000000000000000000
+        0000000000000000000000000000000000000000000000000000000000000160
+        0000000000000000000000000000000000000000000000000000000000000180
+        0000000000000000000000000000000000000000000000000000000000030d40
+        00000000000000000000000000000000000000000000000000000000000186a0
+        0000000000000000000000000000000000000000000000000000000000005208
+        00000000000000000000000000000000000000000000000000000000b2d05e00
+        000000000000000000000000000000000000000000000000000000003b9aca00
+        00000000000000000000000000000000000000000000000000000000000001a0
+        00000000000000000000000000000000000000000000000000000000000001c0
+        0000000000000000000000000000000000000000000000000000000000000000
+        0000000000000000000000000000000000000000000000000000000000000000
+        0000000000000000000000000000000000000000000000000000000000000000
+        0000000000000000000000000000000000000000000000000000000000000041
+        7cb39607585dee8e297d0d7a669ad8c5e43975220b6773c10a138deadbc8ec86
+        4981de4b9b3c735288a217115fb33f8326a61ddabc60a534e3b5536515c70f93
+        1c00000000000000000000000000000000000000000000000000000000000000
+        ").into();
+
+        let orig_use_op = UserOperation {
+            sender: "0x663F3ad617193148711d28f5334eE4Ed07016602".parse().unwrap(),
+            nonce: U256::zero(),
+            init_code: Bytes::default(),
+            call_data: Bytes::default(),
+            call_gas_limit: U256::from(200000),
+            verification_gas_limit: U256::from(100000),
+            pre_verification_gas: U256::from(21000),
+            max_fee_per_gas: U256::from(3000000000_u64),
+            max_priority_fee_per_gas: U256::from(1000000000),
+            paymaster_and_data: Bytes::default(),
+            signature: Bytes::from_str("0x7cb39607585dee8e297d0d7a669ad8c5e43975220b6773c10a138deadbc8ec864981de4b9b3c735288a217115fb33f8326a61ddabc60a534e3b5536515c70f931c").unwrap(),
+        };
+
+        let user_op: UserOperation = encode.try_into().unwrap();
+        assert_eq!(orig_use_op, user_op);
+    }
 
     #[test]
     fn user_operation_pack() {
@@ -271,6 +362,7 @@ mod tests {
                 signature: Bytes::from_str("0x7cb39607585dee8e297d0d7a669ad8c5e43975220b6773c10a138deadbc8ec864981de4b9b3c735288a217115fb33f8326a61ddabc60a534e3b5536515c70f931c").unwrap(),
             },
         ];
+        println!("user_op str {:?}", user_operations[1].pack());
         assert_eq!(user_operations[0].pack(), "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001600000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000186a000000000000000000000000000000000000000000000000000000000000052080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003b9aca0000000000000000000000000000000000000000000000000000000000000001a000000000000000000000000000000000000000000000000000000000000001c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000".parse::<Bytes>().unwrap());
         assert_eq!(user_operations[1].pack(), "0x000000000000000000000000663f3ad617193148711d28f5334ee4ed070166020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000000000000000000000030d4000000000000000000000000000000000000000000000000000000000000186a0000000000000000000000000000000000000000000000000000000000000520800000000000000000000000000000000000000000000000000000000b2d05e00000000000000000000000000000000000000000000000000000000003b9aca0000000000000000000000000000000000000000000000000000000000000001a000000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000417cb39607585dee8e297d0d7a669ad8c5e43975220b6773c10a138deadbc8ec864981de4b9b3c735288a217115fb33f8326a61ddabc60a534e3b5536515c70f931c00000000000000000000000000000000000000000000000000000000000000".parse::<Bytes>().unwrap());
     }
