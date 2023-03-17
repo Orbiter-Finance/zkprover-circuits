@@ -221,8 +221,10 @@ mod tests {
     #[test]
     fn test_hash_circuit_with_check() {
         let k = 7;
-        let m1: Fp = Fp::from_str_vartime("9").unwrap();
-        let m2: Fp = Fp::from_str_vartime("2").unwrap();
+        // let m1: Fp = Fp::from_str_vartime("9").unwrap();
+        // let m2: Fp = Fp::from_str_vartime("2").unwrap();
+        let m1 = Fp::from(1);
+        let m2 = Fp::from(2);
 
         // let m1 = Fp::zero();
         // let m2 = Fp::zero();

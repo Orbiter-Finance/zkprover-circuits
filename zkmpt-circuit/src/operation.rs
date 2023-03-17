@@ -254,6 +254,11 @@ impl<'d, Fp: Hashable>
         let (pub_key,) = <(Fp,)>::from(pub_key);
         let (account_key,) = <(Fp,)>::from(account_key);
         let (tx_hash,) = <(Fp,)>::from(&account_data.tx_hash);
+        // let pre_recrusive_tx_hash = Fp::from_bytes_wide(&account_data.pre_recrusive_tx_hash.cast());
+        // let address = Fp::from_bytes_wide(&address.cast());
+        // let pub_key = Fp::from_bytes_wide(&pub_key.cast());
+        // let account_key = Fp::from_bytes_wide(&account_key.cast());
+        // let tx_hash = Fp::from_bytes_wide(&account_data.tx_hash.cast());
         let acc = Self {
             address,
             pub_key,

@@ -20,14 +20,14 @@ fn main() {
     let end_mpt_root = block_result.end_mpt_root;
 
     let ops: Vec<AccountOp<Fp>> = traces.iter().map(|tr| tr.try_into().unwrap()).collect();
-    // println!("ops {ops:?}");
+    println!("ops {ops:?}");
 
     let mut state_trie: StateTrie<Fp> = Default::default();
     state_trie.add_ops(ops);
 
     let final_root = state_trie.final_root();
     println!("final_root {final_root:?}");
-    // println!("mpt_trans_trace {traces:?}");
+    println!("mpt_trans_trace {traces:?}");
 
     let state_circuit = state_trie.circuits(7, &[]);
 

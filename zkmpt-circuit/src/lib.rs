@@ -23,3 +23,7 @@ pub mod serde;
 pub mod verifier;
 
 pub mod zkProver;
+
+pub mod utils;
+
+pub mod ERC4337;

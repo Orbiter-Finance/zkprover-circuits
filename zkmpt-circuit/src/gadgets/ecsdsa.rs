@@ -9,6 +9,26 @@ use maingate::{MainGate, MainGateConfig, RangeChip, RangeConfig, RangeInstructio
 const BIT_LEN_LIMB: usize = 68;
 const NUMBER_OF_LIMBS: usize = 4;
 
+
+#[derive(Clone, Debug)]
+pub(crate) struct Spec256k1Gadget {
+
+}
+
+impl Spec256k1Gadget {
+    pub fn configure<Fp: FieldExt>(
+        meta: &mut ConstraintSystem<Fp>,
+    ) -> Self {
+        Self {
+
+        }
+    }
+
+    pub fn verify_sig() {
+        
+    }
+}
+
 #[derive(Clone, Debug)]
 struct CircuitEcdsaVerifyConfig {
     main_gate_config: MainGateConfig,
@@ -180,13 +200,18 @@ mod tests {
 
         // sign message from your wallet and print out signature produced.
         let signature = wallet.sign_message(message).await.unwrap();
-        println!("Produced signature {signature}");
+        println!("Produced signature {signature} R: {0} S: {1}", signature.r, signature.s);
         let hash = hash_message(message);
         println!("Produced hash {:?}", hash);
 
         // verify the signature produced from your wallet.
         signature.verify(message, wallet.address()).unwrap();
         println!("Verified signature produced by {:?}!", wallet.address());
+        let signer = wallet.signer();
+
+        let (R, S, HASH)= (signature.r, signature.s, hash_message(message), );
+        println!("signatrue data R: {R} S: {S} HASH: {HASH:?}");
+
     }
 
     
@@ -203,8 +228,8 @@ mod tests {
             let g = C::generator();
 
             // Generate a key pair
-           
             let sk = <C as CurveAffine>::ScalarExt::random(OsRng);
+            println!("sk {sk:?}");
 
             // let sk_str = hex!("AA5E28D6A97A2479A65527F7290311A3624D4CC0FA1578598EE3C2613BF99522");
             // let s = Scalar::from_repr(sk_str.into()).unwrap();
@@ -260,9 +285,9 @@ mod tests {
 
         use halo2_proofs::halo2curves::bn256::Fr as BnScalar;
         use halo2_proofs::halo2curves::pasta::{Fp as PastaFp, Fq as PastaFq};
-        use halo2_proofs::halo2curves::secp256k1::Secp256k1Affine as Secp256k1;
-        run::<Secp256k1, BnScalar>();
-        // run::<Secp256k1, PastaFp>();
-        // run::<Secp256k1, PastaFq>();
+        use halo2_proofs::halo2curves::secp256k1::Secp256k1Affine;
+        run::<Secp256k1Affine, BnScalar>();
+        // run::<Secp256k1Affine, PastaFp>();
+        // run::<Secp256k1Affine, PastaFq>();
     }
 }

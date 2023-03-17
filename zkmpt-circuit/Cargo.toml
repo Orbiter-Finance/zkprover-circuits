@@ -13,7 +13,8 @@ ecdsa = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git"
 ecc = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_02_02" }
 maingate = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_02_02" }
 
-k256= { git = "https://github.com/RustCrypto/elliptic-curves.git", tag = "k256/v0.13.0"}
+k256 = { git = "https://github.com/RustCrypto/elliptic-curves.git", tag = "k256/v0.13.0"}
+reth-db = { git = "https://github.com/paradigmxyz/reth.git", rev = "314ea0883b1062375ad86577be1fccc39233739d" }
 
 rand = "0.8"
 lazy_static = "1.4.0"
@@ -27,6 +28,8 @@ itertools = "0.10.3"
 bytes = "1.4.0"
 ethers = "2.0.0"
 hex-literal = "0.3"
+rustc-hex = "^2.0.1"
+prost = "0.11"
 
 # [patch."https://github.com/privacy-scaling-explorations/halo2.git"]
 # halo2_proofs = { git = "https://github.com/scroll-tech/halo2.git", branch = "scroll-dev-1220" }

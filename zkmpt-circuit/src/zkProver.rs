@@ -1,41 +1,54 @@
 use std::marker::PhantomData;
 
 use halo2_proofs::{
-    plonk::{ Circuit, ConstraintSystem}, 
-    circuit::{SimpleFloorPlanner, Layouter}, 
     arithmetic::FieldExt,
+    circuit::{Layouter, SimpleFloorPlanner},
     halo2curves::bn256::Fr,
+    plonk::{Circuit, ConstraintSystem},
 };
 
-use crate::{operation::AccountOp, gadgets::table_util::MPTProofType};
+use crate::{
+    gadgets::{ecsdsa::Spec256k1Gadget, table_util::MPTProofType},
+    operation::AccountOp,
+    serde::{Hash, MPTTransTrace},
+};
 
-// entry point 
+// entry point
 #[derive(Clone, Debug)]
 pub struct ZkProverCircuitConfig {
-    // speck256k1Gadget: 
+    // speck256k1: Spec256k1Gadget,
 }
 
-impl ZkProverCircuitConfig {
-    pub fn configure<FE: FieldExt>(meta: &mut ConstraintSystem<FE>) -> Self {
-        ZkProverCircuitConfig {
+// impl ZkProverCircuitConfig {
+//     pub fn configure<FE: FieldExt>(meta: &mut ConstraintSystem<FE>) -> Self {
+//         ZkProverCircuitConfig {
 
-        }
-    }
-}
+//         }
+//     }
+// }
 
 #[derive(Clone, Default)]
-pub struct ZkProverCircuit<FE: FieldExt> {
-     /// the maxium records in circuits (would affect vk)
-     pub calcs: usize,
-     pub ops: Vec<AccountOp<FE>>,
- 
-    //   /// the mpt table for operations,
-    //  /// if NONE, circuit work under lite mode
-    //  /// no run-time checking for the consistents between ops and generated mpt table
-    //  pub mpt_table: Vec<MPTProofType>,
+pub struct ZkProverCircuit<Fp: FieldExt, const TX_NUM: usize> {
+    // the maxium records in circuits (would affect vk)
+     pub start_mpt_root: Fp,
+     pub end_mpt_root: Fp,
+    //  pub ops: Vec<AccountOp<Fp>>,
 }
 
-impl <FE: FieldExt> Circuit<FE> for ZkProverCircuit<FE> {
+impl<Fp: FieldExt, const TX_NUM: usize> ZkProverCircuit<Fp, TX_NUM> {
+    // Constructs a new ZkProverCircuit
+    // pub fn new(
+    //     start_mpt_root_hash: Hash,
+    //     end_mpt_root_hash: Hash,
+    //     mpt_transaction: MPTTransTrace,
+    // ) -> Self {
+    //     // let start_mpt_root = start_mpt_root_hash.
+
+    //     Self {}
+    // }
+}
+
+impl<Fp: FieldExt, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_NUM> {
     type Config = ZkProverCircuitConfig;
 
     type FloorPlanner = SimpleFloorPlanner;
@@ -44,11 +57,17 @@ impl <FE: FieldExt> Circuit<FE> for ZkProverCircuit<FE> {
         Self::default()
     }
 
-    fn configure(meta: &mut ConstraintSystem<FE>) -> Self::Config {
-        ZkProverCircuitConfig::configure(meta)
+    fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+        // ZkProverCircuitConfig::configure(meta)
+
+        ZkProverCircuitConfig {}
     }
 
-    fn synthesize(&self, config: Self::Config, layouter: impl Layouter<FE>) -> Result<(), halo2_proofs::plonk::Error> {
+    fn synthesize(
+        &self,
+        config: Self::Config,
+        layouter: impl Layouter<Fp>,
+    ) -> Result<(), halo2_proofs::plonk::Error> {
         todo!()
     }
 }
@@ -57,7 +76,5 @@ impl <FE: FieldExt> Circuit<FE> for ZkProverCircuit<FE> {
 mod tests {
 
     #[test]
-    fn test_func() {
-        
-    }
+    fn test_func() {}
 }
