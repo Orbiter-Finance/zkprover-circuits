@@ -1,14 +1,16 @@
-use std::fs::File;
-use std::io::Read;
 use halo2_proofs::dev::MockProver;
 pub use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use hash_circuit::Hashable;
-use zkprover_mpt_circuits::{serde::{BlockResult, MPTTransTrace}, operation::AccountOp};
-use zkprover_mpt_circuits::{state_trie::StateTrie};
 use serde::Deserialize;
+use std::fs::File;
+use std::io::Read;
+use zkprover_mpt_circuits::state_trie::StateTrie;
+use zkprover_mpt_circuits::{
+    operation::AccountOp,
+    serde::{BlockResult, MPTTransTrace},
+};
 
-
-fn main() {
+fn integration_test() {
     let mut buffer = Vec::new();
     let mut f = File::open("zkmpt-circuit/integration-test/trace.json").unwrap();
     f.read_to_end(&mut buffer).unwrap();
@@ -32,6 +34,4 @@ fn main() {
     let state_circuit = state_trie.circuits(7, &[]);
 
     // let prover_state = MockProver::<Fp>::run(7, &state_circuit, vec![]);
-
-   
 }

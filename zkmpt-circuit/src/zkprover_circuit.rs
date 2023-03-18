@@ -11,6 +11,7 @@ use crate::{
     gadgets::{ecsdsa::Spec256k1Gadget, table_util::MPTProofType},
     operation::AccountOp,
     serde::{Hash, MPTTransTrace},
+    ERC4337::geth_types::Transaction,
 };
 
 // entry point
@@ -30,8 +31,10 @@ pub struct ZkProverCircuitConfig {
 #[derive(Clone, Default)]
 pub struct ZkProverCircuit<Fp: FieldExt, const TX_NUM: usize> {
     // the maxium records in circuits (would affect vk)
-     pub start_mpt_root: Fp,
-     pub end_mpt_root: Fp,
+    pub mpt_root_before: Fp,
+    pub mpt_root_after: Fp,
+    //  pub mpt_proofs: Vec<>
+    pub txs: Vec<Transaction>,
     //  pub ops: Vec<AccountOp<Fp>>,
 }
 

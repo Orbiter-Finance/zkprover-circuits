@@ -5006,11 +5006,13 @@ name = "zkprover-mpt-circuits"
 version = "0.1.0"
 dependencies = [
  "actix",
+ "anyhow",
  "bencher",
  "bytes",
  "ecc",
  "ecdsa 0.1.0",
  "ethers",
+ "futures",
  "halo2_gadgets 0.2.0 (git+https://github.com/privacy-scaling-explorations/halo2?tag=v2023_02_02)",
  "halo2_proofs 0.2.0 (git+https://github.com/privacy-scaling-explorations/halo2?tag=v2023_02_02)",
  "hex",
@@ -5033,4 +5035,5 @@ dependencies = [
  "snark-verifier",
  "subtle",
  "thiserror",
+ "tokio",
 ]
