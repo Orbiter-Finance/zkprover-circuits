@@ -1,12 +1,16 @@
+use halo2_proofs::dev::MockProver;
+pub use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use hash_circuit::Hashable;
+use serde::Deserialize;
 use std::fs::File;
 use std::io::Read;
-pub use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use zkprover_mpt_circuits::{serde::{BlockResult, MPTTransTrace}, operation::AccountOp, state_trie::StateTrie};
+use zkprover_mpt_circuits::state_trie::StateTrie;
+use zkprover_mpt_circuits::{
+    operation::AccountOp,
+    serde::{BlockResult, MPTTransTrace},
+};
 
-use serde::Deserialize;
-
-
-fn main() {
+fn integration_test() {
     let mut buffer = Vec::new();
     let mut f = File::open("zkmpt-circuit/integration-test/trace.json").unwrap();
     f.read_to_end(&mut buffer).unwrap();
@@ -18,12 +22,16 @@ fn main() {
     let end_mpt_root = block_result.end_mpt_root;
 
     let ops: Vec<AccountOp<Fp>> = traces.iter().map(|tr| tr.try_into().unwrap()).collect();
-    // println!("ops {ops:?}");
+    println!("ops {ops:?}");
 
-    let mut data: StateTrie<Fp> = Default::default();
-    data.add_ops(ops);
+    let mut state_trie: StateTrie<Fp> = Default::default();
+    state_trie.add_ops(ops);
 
-    let final_root = data.final_root();
+    let final_root = state_trie.final_root();
     println!("final_root {final_root:?}");
-    // println!("mpt_trans_trace {traces:?}");
+    println!("mpt_trans_trace {traces:?}");
+
+    let state_circuit = state_trie.circuits(7, &[]);
+
+    // let prover_state = MockProver::<Fp>::run(7, &state_circuit, vec![]);
 }

@@ -19,3 +19,13 @@ pub mod state_trie;
 pub mod gadgets;
 
 pub mod serde;
+
+pub mod verifier;
+
+pub mod zkprover_circuit;
+
+pub mod utils;
+
+pub mod ERC4337;
+
+pub mod smt_rocksdb_store;

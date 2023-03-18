@@ -191,6 +191,13 @@ pub struct AccountUpdate {
     pub new_account_state: Option<AccountStateData>,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
+pub struct AccountPathUpdate {
+    pub old_account_state_path: Option<SMTPath>,
+    pub new_account_state_path: Option<SMTPath>,
+}
+
 /// struct in SMTTrace
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SMTNode {
@@ -211,11 +218,30 @@ pub struct AccountPath {
     pub path_part: BigUint,
 }
 
+
+/// struct in SMTTrace
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
+pub struct SMTPath {
+    /// root
+    pub root: Hash,
+    /// leaf
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub leaf: Option<SMTNode>,
+    /// path
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub path: Vec<SMTNode>,
+    /// partitial key which is used for path
+    #[serde(deserialize_with = "de_uint_hex", serialize_with = "se_uint_hex")]
+    pub path_part: BigUint,
+}
+
+
 ///
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
 pub struct MPTTransTrace {
-    /// Address for the trace
+    /// Address for the Account
     pub address: Address,
 
     /// key of account (hash of address)
@@ -232,7 +258,11 @@ pub struct MPTTransTrace {
 
     pub account_update: Option<AccountUpdate>,
 
-    pub account_path: Vec<Option<AccountPath>>,
+    pub account_path_update: Option<AccountPathUpdate>,
+
+    // SMTPath for storage,
+    // pub state_path: [Option<SMTPath>; 2],
+
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

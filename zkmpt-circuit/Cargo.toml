@@ -6,19 +6,47 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hash-circuit = { package = "poseidon-circuit", git = "https://github.com/scroll-tech/poseidon-circuit.git", branch = "scroll-dev-0201"}
-halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2.git", tag = "v2022_09_10" }
+hash-circuit = { package = "poseidon-circuit", git = "https://github.com/ZeroKPunk/poseidon-circuit.git", branch = "scroll-dev-0215"}
+halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_02_02" }
+halo2_gadgets = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_02_02" }
+ecdsa = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_02_02" }
+ecc = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_02_02" }
+maingate = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_02_02" }
+
+k256 = { git = "https://github.com/RustCrypto/elliptic-curves.git", tag = "k256/v0.13.0"}
+reth-db = { git = "https://github.com/paradigmxyz/reth.git", rev = "314ea0883b1062375ad86577be1fccc39233739d" }
+
 rand = "0.8"
 lazy_static = "1.4.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_with = { version = "2.0", features = ["hex"] }
 num-bigint = "0.4"
 num-traits = "0.2.15"
 hex = "0.4"
 thiserror = "1.0"
+itertools = "0.10.3"
+bytes = "1.4.0"
+ethers = "2.0.0"
+hex-literal = "0.3"
+rustc-hex = "^2.0.1"
+prost = "0.11"
 
-[patch."https://github.com/privacy-scaling-explorations/halo2.git"]
-halo2_proofs = { git = "https://github.com/scroll-tech/halo2.git", branch = "scroll-dev-1220" }
+tokio = { version = "1.26.0", features = ["full"] }
+anyhow = "1"
+futures = "0.3"
+
+rocksdb = { package = "ckb-rocksdb", version = "0.19", default-features = false, features = ["snappy", "march-native"] }
+sparse-merkle-tree = "0.6.1"
+jsonrpsee = { version = "0.16.2", features = ["full"] }
+
+# [patch."https://github.com/privacy-scaling-explorations/halo2.git"]
+# halo2_proofs = { git = "https://github.com/scroll-tech/halo2.git", branch = "scroll-dev-1220" }
+
+[dependencies.snark-verifier]
+git = "https://github.com/privacy-scaling-explorations/snark-verifier"
+default-features = false
+features = ["loader_evm", "system_halo2"]
 
 [features]
 # printout the layout of circuits for demo and some unittests
@@ -29,10 +57,14 @@ rand_chacha = "0.3.0"
 plotters = "0.3"
 bencher = "0.1"
 subtle = "2"
+actix = "0.13"
 
 [[bin]]
-name = "integration-test"
-path = "integration-test/src/main.rs"
+# name = "integration-test"
+# path = "integration-test/src/main.rs"
+
+name = "service"
+path = "service/src/main.rs"
 
 [profile.test]
 opt-level = 3

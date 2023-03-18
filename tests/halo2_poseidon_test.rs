@@ -147,8 +147,8 @@ where
 #[test]
 fn halo2_poseidon_test() {
     const K: u32 = 6;
-    const WIDTH: usize = 5;
-    const RATE: usize = 4;
+    const WIDTH: usize = 3;
+    const RATE: usize = 2;
 
     // Initialize the polynomial commitment parameters
     let params: ParamsIPA<vesta::Affine> = ParamsIPA::new(K);
@@ -169,8 +169,8 @@ fn halo2_poseidon_test() {
     let message: [Fp; RATE] = [
         pallas::Base::from(1),
         pallas::Base::from(2),
-        pallas::Base::from(0),
-        pallas::Base::from(0),
+        // pallas::Base::from(0),
+        // pallas::Base::from(0),
     ];
     let output =
         poseidon::Hash::<_, MySpec<WIDTH, RATE>, ConstantLength<RATE>, WIDTH, RATE>::init()

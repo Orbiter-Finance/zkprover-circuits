@@ -16,3 +16,6 @@ typechain-types
 cache
 artifacts
 yarn.lock
+
+output_proof.json
+zkpVerifier.yul
