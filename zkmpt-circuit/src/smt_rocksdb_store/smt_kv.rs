@@ -51,10 +51,6 @@ impl AsRef<[u8]> for SmtValue {
     }
 }
 
-pub async fn pull_bundler_mission() {
-    println!("do sth");
-}
-
 type DefaultStoreSMT<'a, T, W> = SparseMerkleTree<Blake2bHasher, SmtValue, DefaultStore<'a, T, W>>;
 
 pub struct SmtKV {

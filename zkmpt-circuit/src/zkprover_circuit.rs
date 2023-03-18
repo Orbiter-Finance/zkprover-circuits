@@ -11,7 +11,7 @@ use crate::{
     gadgets::{ecsdsa::Spec256k1Gadget, table_util::MPTProofType},
     operation::AccountOp,
     serde::{Hash, MPTTransTrace},
-    ERC4337::geth_types::Transaction,
+    ERC4337::bundler::Transaction,
 };
 
 // entry point

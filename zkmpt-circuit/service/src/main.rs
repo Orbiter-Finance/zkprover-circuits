@@ -12,6 +12,9 @@ use sparse_merkle_tree::{
 };
 use zkprover_mpt_circuits::smt_rocksdb_store::default_store::DefaultStore;
 
+pub async fn pull_bundler_mission() {
+    println!("do sth");
+}
 
 /// cargo run  -- /tmp/smt-store-dir
 #[tokio::main]
