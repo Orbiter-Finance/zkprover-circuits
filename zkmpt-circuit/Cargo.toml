@@ -14,6 +14,7 @@ ecc = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", 
 maingate = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_02_02" }
 
 k256 = { git = "https://github.com/RustCrypto/elliptic-curves.git", tag = "k256/v0.13.0"}
+libsecp256k1 = "0.7"
 reth-db = { git = "https://github.com/paradigmxyz/reth.git", rev = "314ea0883b1062375ad86577be1fccc39233739d" }
 
 rand = "0.8"
@@ -31,6 +32,8 @@ ethers = "2.0.0"
 hex-literal = "0.3"
 rustc-hex = "^2.0.1"
 prost = "0.11"
+subtle = "2.4"
+num = "0.4.0"
 
 tokio = { version = "1.26.0", features = ["full"] }
 anyhow = "1"

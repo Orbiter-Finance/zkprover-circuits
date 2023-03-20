@@ -12,11 +12,18 @@ use sparse_merkle_tree::{
 };
 use zkprover_mpt_circuits::smt_rocksdb_store::default_store::DefaultStore;
 
+
+/// pull the mission from bundler rpc service
 pub async fn pull_bundler_mission() {
     println!("do sth");
 }
 
-/// cargo run  -- /tmp/smt-store-dir
+/// push zkp result to the bundler rpc service
+pub async fn push_zkp_result() {
+    println!("push zkp result");
+}
+
+/// cargo run --package zkprover-mpt-circuits --bin service -- /tmp/smt-store-dir
 #[tokio::main]
 pub async fn main() {
     let args: Vec<String> = env::args().collect();
