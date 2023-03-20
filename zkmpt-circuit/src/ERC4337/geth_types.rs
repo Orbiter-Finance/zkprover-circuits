@@ -4,6 +4,7 @@ use core::fmt::{Display, Formatter, Result as FmtResult};
 use std::error::Error as StdError;
 
 use ethers::types::{TransactionRequest, NameOrAddress};
+use ethers::core::types::Eip1559TransactionRequest;
 
 use super::bundler::Transaction;
 
@@ -45,10 +46,28 @@ impl From<&Transaction> for TransactionRequest {
             from: Some(tx.from),
             to: tx.to.map(NameOrAddress::Address),
             gas: Some(tx.gas_limit),
-            gas_price: Some(tx.gas_price),
+            gas_price: tx.gas_price,
             value: Some(tx.value),
             data: Some(tx.call_data.clone()),
             nonce: Some(tx.nonce),
+            ..Default::default()
+        }
+    }
+}
+
+impl From<&Transaction> for Eip1559TransactionRequest {
+    fn from(tx: &Transaction) -> Eip1559TransactionRequest {
+        Eip1559TransactionRequest { 
+            from: Some(tx.from), 
+            to: tx.to.map(NameOrAddress::Address),
+            gas: Some(tx.gas_limit), 
+            value: Some(tx.value),
+            data: Some(tx.call_data.clone()),
+            nonce: Some(tx.nonce), 
+            access_list: tx.access_list.clone(), 
+            max_priority_fee_per_gas: Some(tx.gas_fee_cap), 
+            max_fee_per_gas: Some(tx.gas_tip_cap), 
+            chain_id: Some(tx.chain_id),
             ..Default::default()
         }
     }

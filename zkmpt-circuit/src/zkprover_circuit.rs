@@ -103,7 +103,7 @@ impl<Fp: FieldExt, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_N
             .txs
             .iter()
             .map(|tx| {
-                tx.sign_data(self.chain_id).map_err(|e| {
+                tx.sign_1559_data().map_err(|e| {
                     error!("tx_to_sign_data error for tx {:?}", tx);
                     e
                 })
@@ -149,5 +149,10 @@ mod tests {
 
         let prover = MockProver::<Fp>::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()));
+    }
+
+    #[test]
+    fn test_circuit_consistency() {
+
     }
 }

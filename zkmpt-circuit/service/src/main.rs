@@ -19,8 +19,9 @@ pub async fn pull_bundler_mission() {
 }
 
 /// push zkp result to the bundler rpc service
-pub async fn push_zkp_result() {
+pub async fn push_zkp_result(task_id: u64) {
     println!("push zkp result");
+    
 }
 
 /// cargo run --package zkprover-mpt-circuits --bin service -- /tmp/smt-store-dir

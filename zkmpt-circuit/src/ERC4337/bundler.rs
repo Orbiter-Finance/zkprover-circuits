@@ -4,9 +4,10 @@
 
 use ethers::{
     core::types::{
-        transaction::eip2930::AccessList, Address, Block, Bytes, TxHash, H160, H256, U256, U64,
+        transaction::eip1559::Eip1559TransactionRequest, transaction::eip2930::AccessList, Address,
+        Block, Bytes, Signature, TxHash, H160, H256, U256, U64,
     },
-    types::TransactionRequest,
+    types::TransactionRequest, utils::keccak256,
 };
 
 use lazy_static::lazy_static;
@@ -23,18 +24,19 @@ use serde::{
     Deserialize, Serialize,
 };
 
+use crate::{
+    gadgets::{ToBigEndian, ToLittleEndian},
+    ERC4337::geth_types::Error as BundlerError,
+};
+use itertools::Itertools;
 use snark_verifier::util::{
     arithmetic::PrimeField,
     hash::{Digest, Keccak256},
 };
 use subtle::CtOption;
 
-use crate::{
-    gadgets::{ToBigEndian, ToLittleEndian},
-    ERC4337::geth_types::Error as BundlerError,
-};
-
 use crate::{gadgets::sign_verify::SignData, operation::TraceError};
+
 
 lazy_static! {
     /// Secp256k1 Curve Scalar.  Referece: Section 2.4.1 (parameter `n`) in "SEC 2: Recommended
@@ -54,16 +56,17 @@ pub struct BundlerRpcTxData {
     /// Recipient address (None for contract creation)
     pub to: Option<Address>,
     pub value: U256,
-    pub gas_price: U256,
+    pub gas_price: Option<U256>,
     pub gas: U256,
     pub input: Bytes,
     pub v: U64,
     pub r: U256,
     pub s: U256,
     pub r#type: U256,
-    pub access_list: Option<AccessList>,
+    pub access_list: AccessList,
     pub max_priority_fee_per_gas: U256,
-    pub chain_id: U256,
+    pub max_fee_per_gas: U256,
+    pub chain_id: U64,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -91,6 +94,7 @@ pub struct Transaction {
     /// Sender address
     pub from: Address,
     /// Recipient address (None for contract creation)
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub to: Option<Address>,
     /// Transaction nonce
     pub nonce: Word,
@@ -99,7 +103,8 @@ pub struct Transaction {
     /// Transfered value
     pub value: Word,
     /// Gas Price
-    pub gas_price: Word,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gas_price: Option<Word>,
     /// Gas fee cap
     pub gas_fee_cap: Word,
     /// Gas tip cap
@@ -109,7 +114,9 @@ pub struct Transaction {
     /// Ethereum Contract ABI
     pub call_data: Bytes,
     /// Access list
-    pub access_list: Option<AccessList>,
+    pub access_list: AccessList,
+
+    pub chain_id: U64,
 
     /// "v" value of the transaction signature
     pub v: u64,
@@ -138,6 +145,7 @@ pub fn pk_bytes_swap_endianness<T: Clone>(pk: &[T]) -> [T; 64] {
 
 /// Recover the public key from a secp256k1 signature and the message hash.
 pub fn recover_pk(
+    add: Address,
     v: u8,
     r: &Word,
     s: &Word,
@@ -149,8 +157,14 @@ pub fn recover_pk(
     let signature = libsecp256k1::Signature::parse_standard(&sig_bytes)?;
     let msg_hash = libsecp256k1::Message::parse_slice(msg_hash.as_slice())?;
     let recovery_id = libsecp256k1::RecoveryId::parse(v)?;
+    println!("recovery_id ${:?}", recovery_id);
     let pk = libsecp256k1::recover(&msg_hash, &signature, &recovery_id)?;
+    println!("recovery pk {:?}", pk);
     let pk_be = pk.serialize();
+    debug_assert_eq!(pk_be[0], 0x04);
+    let pk_hash: [u8; 32] = Keccak256::digest(&pk_be[1..]).as_slice().to_vec().try_into().expect("hash length isn't 32 bytes");
+    let address = Address::from_slice(&pk_hash[12..]);
+    // debug_assert_eq!(address, add);
     let pk_le = pk_bytes_swap_endianness(&pk_be[1..]);
     let x = ct_option_ok_or(
         secp256k1::Fp::from_bytes(pk_le[..32].try_into().unwrap()),
@@ -174,6 +188,54 @@ pub fn biguint_to_32bytes_le(v: BigUint) -> [u8; 32] {
 }
 
 impl Transaction {
+    pub(crate) fn verify_sig(&self) -> Result<(), ()> {
+        todo!()
+    }
+    pub(crate) fn sign_1559_data(&self) -> Result<SignData, BundlerError> {
+        let sig_r_le = self.r.to_le_bytes();
+        let sig_s_le = self.s.to_le_bytes();
+        let chain_id = self.chain_id.as_u64();
+        let sig_r = ct_option_ok_or(
+            secp256k1::Fq::from_repr(sig_r_le),
+            BundlerError::Signature(libsecp256k1::Error::InvalidSignature),
+        )?;
+        let sig_s = ct_option_ok_or(
+            secp256k1::Fq::from_repr(sig_s_le),
+            BundlerError::Signature(libsecp256k1::Error::InvalidSignature),
+        )?;
+        // msg = rlp([nonce, gasPrice, gas, to, value, data, sig_v, r, s])
+        let req: Eip1559TransactionRequest = self.into();
+
+        let msg = req.chain_id(chain_id).rlp();
+        let msg_hash: [u8; 32] = Keccak256::digest(&msg)
+            .as_slice()
+            .to_vec()
+            .try_into()
+            .expect("hash length isn't 32 bytes");
+
+        // let v = self
+        //     .v
+        //     .checked_sub(35 + chain_id * 2)
+        //     .ok_or(BundlerError::Signature(
+        //         libsecp256k1::Error::InvalidSignature,
+        //     ))? as u8;
+        let v = self.v as u8;
+        let pk = recover_pk(self.from, v, &self.r, &self.s, &msg_hash).unwrap();
+        // msg_hash = msg_hash % q
+        let msg_hash = BigUint::from_bytes_be(msg_hash.as_slice());
+        let msg_hash = msg_hash.mod_floor(&*SECP256K1_Q);
+        let msg_hash_le = biguint_to_32bytes_le(msg_hash);
+        let msg_hash = ct_option_ok_or(
+            secp256k1::Fq::from_repr(msg_hash_le),
+            libsecp256k1::Error::InvalidMessage,
+        )
+        .unwrap();
+        Ok(SignData {
+            signature: (sig_r, sig_s),
+            pk,
+            msg_hash,
+        })
+    }
     pub(crate) fn sign_data(&self, chain_id: u64) -> Result<SignData, BundlerError> {
         let sig_r_le = self.r.to_le_bytes();
         let sig_s_le = self.s.to_le_bytes();
@@ -199,7 +261,7 @@ impl Transaction {
             .ok_or(BundlerError::Signature(
                 libsecp256k1::Error::InvalidSignature,
             ))? as u8;
-        let pk = recover_pk(v, &self.r, &self.s, &msg_hash).unwrap();
+        let pk = recover_pk(self.from, v, &self.r, &self.s, &msg_hash).unwrap();
         // msg_hash = msg_hash % q
         let msg_hash = BigUint::from_bytes_be(msg_hash.as_slice());
         let msg_hash = msg_hash.mod_floor(&*SECP256K1_Q);
@@ -221,20 +283,21 @@ impl<'d> TryFrom<&'d BundlerRpcTxData> for Transaction {
     type Error = TraceError;
 
     fn try_from(value: &'d BundlerRpcTxData) -> Result<Self, Self::Error> {
-        let tx = Self {
+        let tx = Transaction {
             from: value.from.clone(),
             to: value.to.clone(),
             nonce: value.nonce.clone(),
             gas_limit: value.gas.clone(),
             value: value.value.clone(),
             gas_price: value.gas_price.clone(),
-            gas_fee_cap: value.max_priority_fee_per_gas.clone(),
+            gas_fee_cap: value.max_fee_per_gas.clone(),
             gas_tip_cap: value.max_priority_fee_per_gas.clone(),
             call_data: value.input.clone(),
             access_list: value.access_list.clone(),
-            v: value.v.as_u64(),
-            r: value.r,
-            s: value.s,
+            v: value.v.as_u64().clone(),
+            r: value.r.clone(),
+            s: value.s.clone(),
+            chain_id: value.chain_id.clone(),
         };
         Ok(tx)
     }
@@ -242,6 +305,7 @@ impl<'d> TryFrom<&'d BundlerRpcTxData> for Transaction {
 
 #[cfg(test)]
 mod tests {
+    use jsonrpsee::tracing::log::error;
     use std::fs::File;
     use std::io::Read;
 
@@ -259,6 +323,14 @@ mod tests {
             .tx_list;
 
         let txs: Vec<Transaction> = rpc_txs.iter().map(|tr| tr.try_into().unwrap()).collect();
-        txs[0].sign_data(5);
+        // txs.iter()
+        //     .map(|tx| {
+        //         tx.sign_1559_data(4337).map_err(|e| {
+        //             error!("tx_to_sign_data error for tx {:?}", tx);
+        //             e
+        //         })
+        //     })
+        //     .try_collect()
+        //     .unwrap();
     }
 }
