@@ -152,7 +152,5 @@ mod tests {
     }
 
     #[test]
-    fn test_circuit_consistency() {
-
-    }
+    fn test_circuit_consistency() {}
 }

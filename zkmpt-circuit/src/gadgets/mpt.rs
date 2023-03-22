@@ -8,8 +8,7 @@ use halo2_proofs::{
 };
 use hash_circuit::Hashable;
 
-use super::{table_util::MPTOpTables, hash_util::HashTable};
-
+use super::{hash_util::HashTable, table_util::MPTOpTables};
 
 /// Represent a sequence of hashes in a path inside MPT, it can be full
 /// (with leaf) or truncated and being padded to an "empty" leaf node,
@@ -21,11 +20,11 @@ pub struct MPTPath<Fp: FieldExt> {
     pub hash_types: Vec<HashType>,
     /// hashes from beginning of path, from the root of MPT to leaf node
     pub hashes: Vec<Fp>,
-    /// the cached traces for calculated all hashes required in verifing a MPT path,
-    /// include the leaf hashing      
+    /// the cached traces for calculated all hashes required in verifing a MPT
+    /// path, include the leaf hashing      
     pub hash_traces: Vec<(Fp, Fp, Fp)>,
-    /// the key of path, which is purposed to be known (though not need while constructing
-    /// empty leaf node)
+    /// the key of path, which is purposed to be known (though not need while
+    /// constructing empty leaf node)
     pub status: MPTPathStatus<Fp>,
 }
 
@@ -63,7 +62,8 @@ impl<Fp: FieldExt> MPTPath<Fp> {
         }
     }
 
-    /// the immediate value in key hashing (for leaf or sibling, depending on status)
+    /// the immediate value in key hashing (for leaf or sibling, depending on
+    /// status)
     pub fn key_immediate(&self) -> Option<Fp> {
         match self.status {
             MPTPathStatus::Empty => None,
@@ -77,7 +77,8 @@ impl<Fp: FieldExt> MPTPath<Fp> {
         matches!(self.status, MPTPathStatus::Extended(_))
     }
 
-    /// the proof (key, key_immediate, value) in extended, for the last sibling is a leaf
+    /// the proof (key, key_immediate, value) in extended, for the last sibling
+    /// is a leaf
     pub fn extended_proof(&self) -> Option<(Fp, Fp, Fp)> {
         match self.status {
             MPTPathStatus::Extended((_, proof)) => Some(proof),
@@ -200,13 +201,13 @@ impl<Fp: Hashable> MPTPath<Fp> {
         })
     }
 
-    /// extend a common path (contain only midle and leaf/empty) to under extended status,
-    /// it require caller to calc how many level should be extended and what the new key is
+    /// extend a common path (contain only midle and leaf/empty) to under
+    /// extended status, it require caller to calc how many level should be
+    /// extended and what the new key is
     pub fn extend(self, l: usize, new_key: Fp) -> Self {
         self.extend_with_hasher(l, new_key, |a, b| <Fp as Hashable>::hash([*a, *b]))
     }
 }
-
 
 /// Represent for a single operation
 #[derive(Clone, Debug, Default)]
@@ -380,7 +381,6 @@ impl<Fp: Hashable> SingleOp<Fp> {
     }
 }
 
-
 /// Indicate the operation type of a row in MPT circuit
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HashType {
@@ -413,14 +413,13 @@ pub enum MPTPathStatus<Fp: FieldExt> {
     Extended(((Fp, Fp), (Fp, Fp, Fp))),
 }
 
-// we lookup the transition of ctrl type from the preset table, and different kind of rules
-// is specified here
+// we lookup the transition of ctrl type from the preset table, and different
+// kind of rules is specified here
 enum CtrlTransitionKind {
     Mpt = 1,        // transition in MPT circuit
     Account,        // transition in account circuit
     Operation = 99, // transition of the old state to new state in MPT circuit
 }
-
 
 #[derive(Clone, Debug)]
 struct PathChipConfig {
@@ -663,7 +662,7 @@ impl<'d, Fp: FieldExt> PathChip<'d, Fp> {
         offset: usize,
         data: &'d <Self as Chip<Fp>>::Loaded,
         ref_ctrl_type: Option<&'d [HashType]>,
-    )-> Self {
+    ) -> Self {
         Self {
             config,
             offset,

@@ -1,6 +1,6 @@
-use std::{hash::Hash, cmp::Ordering};
+use std::{cmp::Ordering, hash::Hash};
 
-use crate::gadgets::mpt::{SingleOp, MPTPath};
+use crate::gadgets::mpt::{MPTPath, SingleOp};
 
 use super::serde;
 use halo2_proofs::arithmetic::FieldExt;
@@ -37,7 +37,6 @@ impl<Fp: FieldExt> AccountOp<Fp> {
         // TODO: should update SingleOp
         10
     }
-
 }
 
 impl<Fp: Hashable> AccountOp<Fp> {
@@ -254,7 +253,8 @@ impl<'d, Fp: Hashable>
         let (pub_key,) = <(Fp,)>::from(pub_key);
         let (account_key,) = <(Fp,)>::from(account_key);
         let (tx_hash,) = <(Fp,)>::from(&account_data.tx_hash);
-        // let pre_recrusive_tx_hash = Fp::from_bytes_wide(&account_data.pre_recrusive_tx_hash.cast());
+        // let pre_recrusive_tx_hash =
+        // Fp::from_bytes_wide(&account_data.pre_recrusive_tx_hash.cast());
         // let address = Fp::from_bytes_wide(&address.cast());
         // let pub_key = Fp::from_bytes_wide(&pub_key.cast());
         // let account_key = Fp::from_bytes_wide(&account_key.cast());

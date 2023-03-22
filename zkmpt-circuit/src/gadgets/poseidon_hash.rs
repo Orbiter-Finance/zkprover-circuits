@@ -1,8 +1,6 @@
-use halo2_proofs::halo2curves::{FieldExt, bn256::Fr};
+use halo2_proofs::halo2curves::{bn256::Fr, FieldExt};
 
-use halo2_gadgets::poseidon::primitives::{
-    Spec, Domain, Hash, P128Pow5T3
-};
+use halo2_gadgets::poseidon::primitives::{Domain, Hash, P128Pow5T3, Spec};
 use hash_circuit::poseidon::primitives::ConstantLengthIden3;
 
 /// indicate an field can be hashed in merkle tree (2 Fields to 1 Field)
@@ -37,9 +35,7 @@ pub trait Hashable: FieldExt {
 #[cfg(test)]
 mod tests {
 
-    use halo2_gadgets::poseidon::{
-        primitives::{self as poseidon, P128Pow5T3, ConstantLength}
-    };
+    use halo2_gadgets::poseidon::primitives::{self as poseidon, ConstantLength, P128Pow5T3};
     use halo2_proofs::halo2curves::pasta::Fp;
     // pub use halo2_proofs::halo2curves::bn256::Fr as Fp;
     // use crate::{test_utils::{Fp},};

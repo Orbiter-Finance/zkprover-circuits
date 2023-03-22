@@ -104,11 +104,8 @@ impl StateTrieConfig {
         let tables = table_util::MPTOpTables::configure_create(meta);
         let hash_tbl = hash_util::HashTable::configure_assign(&hash_tbl);
 
-        let layer = LayerGadget::configure(
-            meta, 
-            5, 
-            std::cmp::max(0, AccountGadget::min_free_cols()), 
-            4);
+        let layer =
+            LayerGadget::configure(meta, 5, std::cmp::max(0, AccountGadget::min_free_cols()), 4);
 
         let account = AccountGadget::configure(
             meta,
@@ -138,19 +135,19 @@ impl StateTrieConfig {
         lite_cfg
     }
 
-    pub fn synthesize_core<'d, Fp:Hashable>(
+    pub fn synthesize_core<'d, Fp: Hashable>(
         &self,
         layouter: &mut impl Layouter<Fp>,
         ops: impl Iterator<Item = &'d AccountOp<Fp>> + Clone,
         rows: usize,
     ) -> Result<(), Error> {
         let start_root = ops
-                            .clone()
-                            .next()
-                            .map(|op| op.account_root_before())
-                            .unwrap_or_else(Fp::zero);
+            .clone()
+            .next()
+            .map(|op| op.account_root_before())
+            .unwrap_or_else(Fp::zero);
         layouter.assign_region(
-            || "main", 
+            || "main",
             |mut region| {
                 let mut series: usize = 1;
                 let mut last_op_code = self.layer.start_op_code();
@@ -159,16 +156,18 @@ impl StateTrieConfig {
                 // let empty_account = Default::default();
                 for op in ops.clone() {
                     let block_start = start;
-                    self.layer.pace_op(
-                        &mut region,
-                        start,
-                        (last_op_code, OP_TRIE_ACCOUNT),
-                        op.use_rows_trie_account(),
-                    ).unwrap();
+                    self.layer
+                        .pace_op(
+                            &mut region,
+                            start,
+                            (last_op_code, OP_TRIE_ACCOUNT),
+                            op.use_rows_trie_account(),
+                        )
+                        .unwrap();
                     // start = self.account
-                };
+                }
                 Ok(())
-            }
+            },
         )
     }
 }

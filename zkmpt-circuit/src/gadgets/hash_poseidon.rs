@@ -1,6 +1,5 @@
-use halo2_gadgets::poseidon::{primitives::{Spec, Domain, Hash, P128Pow5T3}};
-use halo2_proofs::halo2curves::{FieldExt, bn256::Fr};
-
+use halo2_gadgets::poseidon::primitives::{Domain, Hash, P128Pow5T3, Spec};
+use halo2_proofs::halo2curves::{bn256::Fr, FieldExt};
 
 pub trait Hashable: FieldExt {
     /// the spec type used in circuit for this hashable field
@@ -21,7 +20,7 @@ pub trait Hashable: FieldExt {
 }
 
 // impl Hashable for Fr {
-    
+
 //     type SpecType = P128Pow5T3;
 //     type DomainType = ConstantLengthIden3<2>;
 //     fn hash(inp: [Self; 2]) -> Self {
@@ -32,11 +31,9 @@ pub trait Hashable: FieldExt {
 
 #[cfg(test)]
 mod tests {
-    use halo2_gadgets::poseidon::{
-        primitives::{Spec, self as poseidon, ConstantLength}
-    };
-    use halo2_proofs::arithmetic::Field;
     use crate::test_utils::Fp;
+    use halo2_gadgets::poseidon::primitives::{self as poseidon, ConstantLength, Spec};
+    use halo2_proofs::arithmetic::Field;
     #[derive(Debug, Clone, Copy)]
     struct MySpec<const WIDTH: usize, const RATE: usize>;
 
@@ -66,9 +63,9 @@ mod tests {
         let m1 = Fp::from(1);
         let m2 = Fp::from(2);
 
-
-        let hash_result = poseidon::Hash::<_, MySpec<WIDTH, RATE>, ConstantLength<RATE>, WIDTH, RATE>::init()
-            .hash([m1, m2]);
+        let hash_result =
+            poseidon::Hash::<_, MySpec<WIDTH, RATE>, ConstantLength<RATE>, WIDTH, RATE>::init()
+                .hash([m1, m2]);
         println!("m1 {m1:?} m2 {m2:?} hash_result {hash_result:?}");
     }
 }

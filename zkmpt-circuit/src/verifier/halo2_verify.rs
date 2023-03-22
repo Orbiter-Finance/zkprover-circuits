@@ -29,11 +29,7 @@ use snark_verifier::{
     loader::evm::{self, EvmLoader},
     system::halo2::{compile, transcript::evm::EvmTranscript, Config},
 };
-use std::{
-    rc::Rc,
-    fs::File,
-    io::prelude::*,
-};
+use std::{fs::File, io::prelude::*, rc::Rc};
 
 use hex::encode;
 
@@ -224,18 +220,24 @@ where
     F: PrimeField<Repr = [u8; 32]>,
 {
     let instances_json: Vec<u8> = iter::empty()
-                                    .chain(
-                                        instances
-                                        .iter()
-                                        .flatten()
-                                        .flat_map(|value| value.to_repr().as_ref().iter().rev().cloned().collect_vec())
-                                    )
-                                    .collect();
+        .chain(
+            instances
+                .iter()
+                .flatten()
+                .flat_map(|value| value.to_repr().as_ref().iter().rev().cloned().collect_vec()),
+        )
+        .collect();
 
-                                    // format!("0x{}", hex::encode(x.as_ref()))
-    println!("instances_json {:?}", format!("0x{}",hex::encode(instances_json.clone())));
+    // format!("0x{}", hex::encode(x.as_ref()))
+    println!(
+        "instances_json {:?}",
+        format!("0x{}", hex::encode(instances_json.clone()))
+    );
 
-    println!("instance_proof {:?}",format!("0x{}", hex::encode(proof.clone())));
+    println!(
+        "instance_proof {:?}",
+        format!("0x{}", hex::encode(proof.clone()))
+    );
 
     let proof_data = json!({
         "pub_ins": format!("0x{}",hex::encode(instances_json.clone())),
@@ -257,20 +259,23 @@ where
     result
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::{
         io::Write,
-        process::{Command, Stdio}, iter,
+        iter,
+        process::{Command, Stdio},
     };
 
     use halo2_proofs::dev::MockProver;
 
-    use crate::{test_utils::{hash_str_to_fp, Fp}, verifier::halo2_verify::encode_calldata_json};
     use crate::verifier::{
         evm_verify, gen_evm_verifier, gen_pk, gen_proof, gen_srs,
         halo2_verify::{get_fibo_seq, FiboCircuit},
+    };
+    use crate::{
+        test_utils::{hash_str_to_fp, Fp},
+        verifier::halo2_verify::encode_calldata_json,
     };
 
     #[test]
@@ -296,7 +301,6 @@ mod tests {
         let deployment_code = gen_evm_verifier(&params, pk.get_vk(), vec![1]);
 
         let mut instances = vec![vec![res]];
-        
 
         let proof = gen_proof(&params, &pk, fibo_circuit.clone(), vec![vec![res]]);
 

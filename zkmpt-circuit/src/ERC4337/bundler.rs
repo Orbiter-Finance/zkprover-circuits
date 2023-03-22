@@ -7,7 +7,8 @@ use ethers::{
         transaction::eip1559::Eip1559TransactionRequest, transaction::eip2930::AccessList, Address,
         Block, Bytes, Signature, TxHash, H160, H256, U256, U64,
     },
-    types::TransactionRequest, utils::keccak256,
+    types::TransactionRequest,
+    utils::keccak256,
 };
 
 use lazy_static::lazy_static;
@@ -36,7 +37,6 @@ use snark_verifier::util::{
 use subtle::CtOption;
 
 use crate::{gadgets::sign_verify::SignData, operation::TraceError};
-
 
 lazy_static! {
     /// Secp256k1 Curve Scalar.  Referece: Section 2.4.1 (parameter `n`) in "SEC 2: Recommended
@@ -162,7 +162,11 @@ pub fn recover_pk(
     println!("recovery pk {:?}", pk);
     let pk_be = pk.serialize();
     debug_assert_eq!(pk_be[0], 0x04);
-    let pk_hash: [u8; 32] = Keccak256::digest(&pk_be[1..]).as_slice().to_vec().try_into().expect("hash length isn't 32 bytes");
+    let pk_hash: [u8; 32] = Keccak256::digest(&pk_be[1..])
+        .as_slice()
+        .to_vec()
+        .try_into()
+        .expect("hash length isn't 32 bytes");
     let address = Address::from_slice(&pk_hash[12..]);
     // debug_assert_eq!(address, add);
     let pk_le = pk_bytes_swap_endianness(&pk_be[1..]);

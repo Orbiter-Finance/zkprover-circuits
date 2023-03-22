@@ -7,7 +7,10 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use std::{fmt::{Debug, Display, Formatter}, ops::Add};
+use std::{
+    fmt::{Debug, Display, Formatter},
+    ops::Add,
+};
 
 impl<const LEN: usize> Serialize for HexBytes<LEN> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -218,7 +221,6 @@ pub struct AccountPath {
     pub path_part: BigUint,
 }
 
-
 /// struct in SMTTrace
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
@@ -235,7 +237,6 @@ pub struct SMTPath {
     #[serde(deserialize_with = "de_uint_hex", serialize_with = "se_uint_hex")]
     pub path_part: BigUint,
 }
-
 
 ///
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -259,10 +260,8 @@ pub struct MPTTransTrace {
     pub account_update: Option<AccountUpdate>,
 
     pub account_path_update: Option<AccountPathUpdate>,
-
     // SMTPath for storage,
     // pub state_path: [Option<SMTPath>; 2],
-
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

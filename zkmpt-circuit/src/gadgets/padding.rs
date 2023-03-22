@@ -1,7 +1,12 @@
-use halo2_proofs::{plonk::{Column, Advice, ConstraintSystem, Selector, Error}, halo2curves::FieldExt, circuit::{Region, Value}};
+use halo2_proofs::{
+    circuit::{Region, Value},
+    halo2curves::FieldExt,
+    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
+};
 
-// padding gadget keep start and end root identical, it often act as the "terminal" circuit to fill the rest space
-// in the region, it has only one ctrl type equal to 0,
+// padding gadget keep start and end root identical, it often act as the
+// "terminal" circuit to fill the rest space in the region, it has only one ctrl
+// type equal to 0,
 #[derive(Clone, Debug)]
 pub(crate) struct PaddingGadget {
     s_enable: Column<Advice>,

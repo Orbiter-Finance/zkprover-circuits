@@ -165,12 +165,16 @@ impl HashTable {
 #[cfg(test)]
 mod tests {
     #![allow(unused_imports)]
-    use crate::{gadgets::hash_util::HashCircuit, test_utils::{Fp, rand_fp}};
+    use crate::{
+        gadgets::hash_util::HashCircuit,
+        test_utils::{rand_fp, Fp},
+    };
 
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
-        plonk::{Circuit, ConstraintSystem, Error}, halo2curves::group::ff::PrimeField,
+        halo2curves::group::ff::PrimeField,
+        plonk::{Circuit, ConstraintSystem, Error},
     };
     use hash_circuit::{
         hash::{PoseidonHashChip, PoseidonHashConfig, PoseidonHashTable},
@@ -261,7 +265,4 @@ mod tests {
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()));
     }
-
-
-
 }

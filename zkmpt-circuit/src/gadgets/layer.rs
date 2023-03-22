@@ -253,22 +253,23 @@ impl LayerGadget {
         Ok(1)
     }
 
-    /// pace has to be called before a working gadget is assigned on the specified offset, the rows
-    /// that working gadget would occpuy, and the result of the new root which gadget has output,
-    /// must be known before
-    pub fn pace_op<Fp: FieldExt> (
+    /// pace has to be called before a working gadget is assigned on the
+    /// specified offset, the rows that working gadget would occpuy, and the
+    /// result of the new root which gadget has output, must be known before
+    pub fn pace_op<Fp: FieldExt>(
         &self,
         region: &mut Region<'_, Fp>,
         offset: usize,
         op_type: (u32, u32), //op before -> op now
         rows: usize,
-    ) -> Result<(), Error>{
+    ) -> Result<(), Error> {
         let mut prev_op = op_type.0;
         let op_delta = Fp::from(op_type.1 as u64) - Fp::from(op_type.0 as u64);
         for offset in offset..(offset + rows) {
             region.assign_advice(
-                || "op type", 
-                self.op_type, offset, 
+                || "op type",
+                self.op_type,
+                offset,
                 || Value::known(Fp::from(op_type.1 as u64)),
             )?;
             region.assign_advice(
@@ -280,19 +281,19 @@ impl LayerGadget {
                         Fp::zero()
                     } else {
                         op_delta.invert().unwrap()
-                    }) 
-                }
+                    })
+                },
             )?;
             // flush all cols to avoid unassigned error
             self.free_cols.iter().try_for_each(|col| {
                 region
                     .assign_advice(
-                        || "flushing free", 
-                        *col, 
-                        offset, 
-                        || Value::known(Fp::zero())
+                        || "flushing free",
+                        *col,
+                        offset,
+                        || Value::known(Fp::zero()),
                     )
-                    .map(|_|())
+                    .map(|_| ())
             })?;
             // flush all cols to avoid unassigned error
             self.s_ctrl_type.iter().try_for_each(|col| {

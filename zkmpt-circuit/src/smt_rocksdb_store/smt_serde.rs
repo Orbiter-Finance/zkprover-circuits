@@ -2,7 +2,8 @@ use std::convert::TryInto;
 
 use sparse_merkle_tree::{merge::MergeValue, BranchKey, BranchNode};
 
-/// Serialize a `BranchKey` into a `Vec<u8>` for use as a key in the key-value store.
+/// Serialize a `BranchKey` into a `Vec<u8>` for use as a key in the key-value
+/// store.
 pub fn branch_key_to_vec(key: &BranchKey) -> Vec<u8> {
     let mut ret = Vec::with_capacity(33);
     ret.extend_from_slice(&[key.height]);
@@ -10,7 +11,8 @@ pub fn branch_key_to_vec(key: &BranchKey) -> Vec<u8> {
     ret
 }
 
-/// Serialize a `BranchNode` into a `Vec<u8>` for use as a key in the key-value store.
+/// Serialize a `BranchNode` into a `Vec<u8>` for use as a key in the key-value
+/// store.
 pub fn branch_node_to_vec(node: &BranchNode) -> Vec<u8> {
     match (&node.left, &node.right) {
         (MergeValue::Value(left), MergeValue::Value(right)) => {
@@ -158,7 +160,8 @@ pub fn branch_node_to_vec(node: &BranchNode) -> Vec<u8> {
     }
 }
 
-/// Deserialize a `BranchNode` from a slice that was previously serialized with `branch_node_to_vec`.
+/// Deserialize a `BranchNode` from a slice that was previously serialized with
+/// `branch_node_to_vec`.
 pub fn slice_to_branch_node(slice: &[u8]) -> BranchNode {
     match slice[0] {
         0 => {

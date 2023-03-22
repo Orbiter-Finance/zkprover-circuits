@@ -7,11 +7,15 @@ use sparse_merkle_tree::{
     BranchKey, BranchNode, H256,
 };
 
-use crate::smt_rocksdb_store::smt_serde::{branch_key_to_vec, branch_node_to_vec, slice_to_branch_node};
+use crate::smt_rocksdb_store::smt_serde::{
+    branch_key_to_vec, branch_node_to_vec, slice_to_branch_node,
+};
 
-/// A SMT `Store` implementation backed by a RocksDB database, using different column families to store the branches and the leaves.
+/// A SMT `Store` implementation backed by a RocksDB database, using different
+/// column families to store the branches and the leaves.
 pub struct ColumnFamilyStore<'a, T, W> {
-    // The RocksDB database which stores the data, can be a `DB` / `OptimisticTransactionDB` / `Snapshot` etc.
+    // The RocksDB database which stores the data, can be a `DB` / `OptimisticTransactionDB` /
+    // `Snapshot` etc.
     inner: &'a T,
     branch_col: &'a ColumnFamily,
     leaf_col: &'a ColumnFamily,
@@ -84,11 +88,14 @@ where
     }
 }
 
-/// A SMT `Store` implementation backed by a RocksDB database, using different column families to store the branches and the leaves, supports multiple trees.
+/// A SMT `Store` implementation backed by a RocksDB database, using different
+/// column families to store the branches and the leaves, supports multiple
+/// trees.
 pub struct ColumnFamilyStoreMultiTree<'a, T, W> {
     // A key prefix to distinguish different trees.
     prefix: &'a [u8],
-    // The RocksDB database which stores the data, can be a `DB` / `OptimisticTransactionDB` / `Snapshot` etc.
+    // The RocksDB database which stores the data, can be a `DB` / `OptimisticTransactionDB` /
+    // `Snapshot` etc.
     inner: &'a T,
     branch_col: &'a ColumnFamily,
     leaf_col: &'a ColumnFamily,

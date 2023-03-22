@@ -1,10 +1,13 @@
 pub use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::{arithmetic::Field, halo2curves::{group::ff::PrimeField, FieldExt}};
+use halo2_proofs::{
+    arithmetic::Field,
+    halo2curves::{group::ff::PrimeField, FieldExt},
+};
+use lazy_static::lazy_static;
 use num_traits::Num;
 use rand::{random, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::{i64, str::FromStr};
-use lazy_static::lazy_static;
 
 lazy_static! {
     static ref GAMMA: Fp = Fp::random(rand_gen([101u8; 32]));

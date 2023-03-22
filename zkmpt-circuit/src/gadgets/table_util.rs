@@ -1,14 +1,17 @@
-use halo2_proofs::{plonk::{TableColumn, ConstraintSystem, Expression, Error}, arithmetic::Field, halo2curves::FieldExt, circuit::{Layouter, Value}};
+use halo2_proofs::{
+    arithmetic::Field,
+    circuit::{Layouter, Value},
+    halo2curves::FieldExt,
+    plonk::{ConstraintSystem, Error, Expression, TableColumn},
+};
 
-
-// we lookup the transition of ctrl type from the preset table, and different kind of rules
-// is specified here
+// we lookup the transition of ctrl type from the preset table, and different
+// kind of rules is specified here
 pub(crate) enum CtrlTransitionKind {
     Mpt = 1,        // transition in MPT circuit
     Account,        // transition in account circuit
     Operation = 99, // transition of the old state to new state in MPT circuit
 }
-
 
 #[derive(Clone, Debug)]
 pub(crate) struct MPTOpTables(
@@ -41,9 +44,7 @@ pub enum MPTProofType {
 
 /// Entry for mpt table
 
-
 impl MPTOpTables {
-
     pub fn configure_create<Fp: Field>(meta: &mut ConstraintSystem<Fp>) -> Self {
         Self(
             meta.lookup_table_column(),
@@ -118,5 +119,3 @@ impl MPTOpTables {
         )
     }
 }
-
-

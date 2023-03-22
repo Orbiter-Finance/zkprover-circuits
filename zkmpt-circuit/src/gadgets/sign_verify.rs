@@ -1,11 +1,12 @@
 use std::marker::PhantomData;
 
 use halo2_proofs::{
-    halo2curves::{
-        secp256k1::{Secp256k1Affine, self}, FieldExt
-    }, 
     circuit::Layouter,
-    plonk::{Expression, ConstraintSystem}
+    halo2curves::{
+        secp256k1::{self, Secp256k1Affine},
+        FieldExt,
+    },
+    plonk::{ConstraintSystem, Expression},
 };
 
 /// Return a copy of the serialized public key with swapped Endianness.
@@ -26,7 +27,6 @@ pub(crate) struct SignData {
     pub(crate) msg_hash: secp256k1::Fq,
 }
 
-
 /// Power of randomness vector size required for the SignVerifyChip
 pub const POW_RAND_SIZE: usize = 63;
 /// SignVerify Configuration
@@ -41,7 +41,7 @@ impl<F: FieldExt> SignVerifyConfig<F> {
         power_of_randomness: [Expression<F>; POW_RAND_SIZE],
     ) -> Self {
         Self {
-            power_of_randomness
+            power_of_randomness,
         }
     }
 }
@@ -66,6 +66,5 @@ impl<F: FieldExt, const MAX_VERIF: usize> SignVerifyChip<F, MAX_VERIF> {
         randomness: F,
         signatures: &[SignData],
     ) {
-       
     }
 }

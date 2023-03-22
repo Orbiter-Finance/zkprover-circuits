@@ -1,32 +1,29 @@
-
 use std::marker::PhantomData;
 
-use ecc::{GeneralEccChip, EccConfig, integer::{IntegerInstructions, Range}};
-use ecdsa::ecdsa::{EcdsaChip, AssignedEcdsaSig, AssignedPublicKey};
-use halo2_proofs::{halo2curves::{CurveAffine, FieldExt}, plonk::{ConstraintSystem, Error, Circuit}, circuit::{Layouter, Value, SimpleFloorPlanner}};
+use ecc::{
+    integer::{IntegerInstructions, Range},
+    EccConfig, GeneralEccChip,
+};
+use ecdsa::ecdsa::{AssignedEcdsaSig, AssignedPublicKey, EcdsaChip};
+use halo2_proofs::{
+    circuit::{Layouter, SimpleFloorPlanner, Value},
+    halo2curves::{CurveAffine, FieldExt},
+    plonk::{Circuit, ConstraintSystem, Error},
+};
 use maingate::{MainGate, MainGateConfig, RangeChip, RangeConfig, RangeInstructions, RegionCtx};
 
 const BIT_LEN_LIMB: usize = 68;
 const NUMBER_OF_LIMBS: usize = 4;
 
-
 #[derive(Clone, Debug)]
-pub(crate) struct Spec256k1Gadget {
-
-}
+pub(crate) struct Spec256k1Gadget {}
 
 impl Spec256k1Gadget {
-    pub fn configure<Fp: FieldExt>(
-        meta: &mut ConstraintSystem<Fp>,
-    ) -> Self {
-        Self {
-
-        }
+    pub fn configure<Fp: FieldExt>(meta: &mut ConstraintSystem<Fp>) -> Self {
+        Self {}
     }
 
-    pub fn verify_sig() {
-        
-    }
+    pub fn verify_sig() {}
 }
 
 #[derive(Clone, Debug)]
@@ -37,8 +34,7 @@ struct CircuitEcdsaVerifyConfig {
 
 impl CircuitEcdsaVerifyConfig {
     pub fn new<C: CurveAffine, N: FieldExt>(meta: &mut ConstraintSystem<N>) -> Self {
-        let (rns_base, rns_scalar) =
-            GeneralEccChip::<C, N, NUMBER_OF_LIMBS, BIT_LEN_LIMB>::rns();
+        let (rns_base, rns_scalar) = GeneralEccChip::<C, N, NUMBER_OF_LIMBS, BIT_LEN_LIMB>::rns();
         let main_gate_config = MainGate::<N>::configure(meta);
         let mut overflow_bit_lens: Vec<usize> = vec![];
         overflow_bit_lens.extend(rns_base.overflow_lengths());
@@ -61,10 +57,7 @@ impl CircuitEcdsaVerifyConfig {
         EccConfig::new(self.range_config.clone(), self.main_gate_config.clone())
     }
 
-    pub fn config_range<N: FieldExt>(
-        &self,
-        layouter: &mut impl Layouter<N>,
-    ) -> Result<(), Error> {
+    pub fn config_range<N: FieldExt>(&self, layouter: &mut impl Layouter<N>) -> Result<(), Error> {
         let range_chip = RangeChip::<N>::new(self.range_config.clone());
         range_chip.load_table(layouter)?;
 
@@ -100,9 +93,8 @@ impl<E: CurveAffine, N: FieldExt> Circuit<N> for CircuitEcdsaVerify<E, N> {
         config: Self::Config,
         mut layouter: impl Layouter<N>,
     ) -> Result<(), Error> {
-        let mut ecc_chip = GeneralEccChip::<E, N, NUMBER_OF_LIMBS, BIT_LEN_LIMB>::new(
-            config.ecc_chip_config(),
-        );
+        let mut ecc_chip =
+            GeneralEccChip::<E, N, NUMBER_OF_LIMBS, BIT_LEN_LIMB>::new(config.ecc_chip_config());
 
         layouter.assign_region(
             || "assign aux values",
@@ -131,10 +123,8 @@ impl<E: CurveAffine, N: FieldExt> Circuit<N> for CircuitEcdsaVerify<E, N> {
                 let integer_s = ecc_chip.new_unassigned_scalar(s);
                 let msg_hash = ecc_chip.new_unassigned_scalar(self.msg_hash);
 
-                let r_assigned =
-                    scalar_chip.assign_integer(ctx, integer_r, Range::Remainder)?;
-                let s_assigned =
-                    scalar_chip.assign_integer(ctx, integer_s, Range::Remainder)?;
+                let r_assigned = scalar_chip.assign_integer(ctx, integer_r, Range::Remainder)?;
+                let s_assigned = scalar_chip.assign_integer(ctx, integer_s, Range::Remainder)?;
                 let sig = AssignedEcdsaSig {
                     r: r_assigned,
                     s: s_assigned,
@@ -158,29 +148,33 @@ impl<E: CurveAffine, N: FieldExt> Circuit<N> for CircuitEcdsaVerify<E, N> {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod tests {
-    use halo2_proofs::{arithmetic::{CurveAffine, FieldExt, Field}, circuit::Value};
-    use maingate::{fe_to_big, big_to_fe, mock_prover_verify};
-    use rand::{rngs::OsRng, thread_rng};
     use halo2_proofs::halo2curves::group::{Curve, Group};
+    use halo2_proofs::{
+        arithmetic::{CurveAffine, Field, FieldExt},
+        circuit::Value,
+    };
+    use maingate::{big_to_fe, fe_to_big, mock_prover_verify};
+    use rand::{rngs::OsRng, thread_rng};
     // use crate::{test_utils::{Fp}};
     use halo2_proofs::halo2curves::secp256k1::Fp;
 
     use crate::gadgets::ecsdsa::CircuitEcdsaVerify;
     use ethers::{
-        signers::{LocalWallet, Signer, Wallet}, 
-        prelude::k256::{ecdsa::SigningKey},
-        utils::hash_message
-    };
-    use k256::{
-        ProjectivePoint, Scalar, elliptic_curve::{PrimeField, ops::MulByGenerator}
+        prelude::k256::ecdsa::SigningKey,
+        signers::{LocalWallet, Signer, Wallet},
+        utils::hash_message,
     };
     use hex_literal::hex;
+    use k256::{
+        elliptic_curve::{ops::MulByGenerator, PrimeField},
+        ProjectivePoint, Scalar,
+    };
 
     macro_rules! aw {
         ($e:expr) => {
             tokio_test::block_on($e)
         };
-      }
+    }
 
     #[test]
     fn test_affine() {
@@ -192,7 +186,9 @@ mod tests {
         // let wallet = LocalWallet::new(&mut thread_rng());
 
         let wallet: Wallet<SigningKey> =
-            "0000000000000000000000000000000000000000000000000000000000000001".parse().unwrap();
+            "0000000000000000000000000000000000000000000000000000000000000001"
+                .parse()
+                .unwrap();
         println!("wallet address {:?}", wallet.address());
 
         // Declare the message you want to sign.
@@ -200,7 +196,10 @@ mod tests {
 
         // sign message from your wallet and print out signature produced.
         let signature = wallet.sign_message(message).await.unwrap();
-        println!("Produced signature {signature} R: {0} S: {1}", signature.r, signature.s);
+        println!(
+            "Produced signature {signature} R: {0} S: {1}",
+            signature.r, signature.s
+        );
         let hash = hash_message(message);
         println!("Produced hash {:?}", hash);
 
@@ -209,13 +208,9 @@ mod tests {
         println!("Verified signature produced by {:?}!", wallet.address());
         let signer = wallet.signer();
 
-        let (R, S, HASH)= (signature.r, signature.s, hash_message(message), );
+        let (R, S, HASH) = (signature.r, signature.s, hash_message(message));
         println!("signatrue data R: {R} S: {S} HASH: {HASH:?}");
-
     }
-
-    
-   
 
     #[test]
     fn test_ecdsa_verifier() {
@@ -231,7 +226,8 @@ mod tests {
             let sk = <C as CurveAffine>::ScalarExt::random(OsRng);
             println!("sk {sk:?}");
 
-            // let sk_str = hex!("AA5E28D6A97A2479A65527F7290311A3624D4CC0FA1578598EE3C2613BF99522");
+            // let sk_str =
+            // hex!("AA5E28D6A97A2479A65527F7290311A3624D4CC0FA1578598EE3C2613BF99522");
             // let s = Scalar::from_repr(sk_str.into()).unwrap();
             // let sk = ProjectivePoint::mul_by_generator(&s);
             // let sk = <C as CurveAffine>::ScalarExt::mul_by_generator(s);

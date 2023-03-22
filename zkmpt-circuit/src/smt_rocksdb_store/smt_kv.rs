@@ -8,12 +8,12 @@ use sparse_merkle_tree::{blake2b::Blake2bHasher, traits::Value, SparseMerkleTree
 use std::fmt::Error;
 
 #[serde_as]
-#[derive(Eq,PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Eq, PartialEq, Serialize, Deserialize, Debug)]
 pub struct SmtRoot(#[serde_as(as = "serde_with::hex::Hex")] [u8; 32]);
 
 impl SmtRoot {
     pub fn to_hex(&self) -> String {
-        let hex_str:String = self.0.to_hex();
+        let hex_str: String = self.0.to_hex();
         hex_str
     }
 }
@@ -54,7 +54,7 @@ impl AsRef<[u8]> for SmtValue {
 type DefaultStoreSMT<'a, T, W> = SparseMerkleTree<Blake2bHasher, SmtValue, DefaultStore<'a, T, W>>;
 
 pub struct SmtKV {
-    db: OptimisticTransactionDB
+    db: OptimisticTransactionDB,
 }
 
 /// SMT KV: Sparse Binanry Merkle Tree + RocksDB
@@ -92,20 +92,21 @@ mod tests {
     use rocksdb::{prelude::Open, OptimisticTransactionDB};
     use rustc_hex::ToHex;
 
-
-    use super::{SmtKV, SmtKey, SmtValue, SmtRoot};
+    use super::{SmtKV, SmtKey, SmtRoot, SmtValue};
 
     #[test]
     fn test_smtkv() {
         let db = OptimisticTransactionDB::open_default("/tmp/rocskdb/").unwrap();
         let smt = SmtKV::new(db);
-        let test_kv_data: Vec<(SmtKey, SmtValue)> = vec![(
+        let test_kv_data: Vec<(SmtKey, SmtValue)> = vec![
+            (
                 SmtKey(hex!(
                     "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a"
                 )),
                 SmtValue(hex!(
                     "a939a47335f777eac4c40fbc0970e25f832a24e1d55adc45a7b76d63fe364e82"
-                ))),
+                )),
+            ),
             // (
             //     SmtKey(hex!(
             //         "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a"
@@ -116,9 +117,14 @@ mod tests {
             // )
         ];
         let smt_root = smt.update_all(test_kv_data).unwrap();
-        
+
         println!("smt_root {:}", smt_root.to_hex());
-        assert_eq!(smt_root, SmtRoot(hex!("3ec3865db0f76a135283a908e5b2847164c3bc732ce3ad89e917de45c6d72ac9")));
+        assert_eq!(
+            smt_root,
+            SmtRoot(hex!(
+                "3ec3865db0f76a135283a908e5b2847164c3bc732ce3ad89e917de45c6d72ac9"
+            ))
+        );
         let proof = smt
             .merkle_proof(vec![SmtKey(hex!(
                 "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a"

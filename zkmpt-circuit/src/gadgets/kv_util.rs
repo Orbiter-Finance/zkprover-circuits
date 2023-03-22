@@ -1,7 +1,8 @@
 use halo2_proofs::halo2curves::FieldExt;
 use hash_circuit::Hashable;
 
-/// 2 fields for representing 32 byte, used for storage key or value, the hash is also saved
+/// 2 fields for representing 32 byte, used for storage key or value, the hash
+/// is also saved
 #[derive(Clone, Debug, Default)]
 pub struct KeyValue<Fp> {
     data: (Fp, Fp, Fp), // (the first 16 bytes, the second 16 bytes, hash value)
@@ -30,8 +31,8 @@ impl<Fp: FieldExt> KeyValue<Fp> {
     }
     /// obtain the linear combination of the value, in byte represent, which
     /// is common used in zkevm circuit
-    /// the u256 is represented by le bytes and combined with randomness 1, o, o^2 ... o^31 on each
-    /// and we calculate it from be represent
+    /// the u256 is represented by le bytes and combined with randomness 1, o,
+    /// o^2 ... o^31 on each and we calculate it from be represent
     pub fn u8_rlc(&self, randomness: Fp) -> Fp {
         let u128_hi = self.data.0.get_lower_128();
         let u128_lo = self.data.1.get_lower_128();

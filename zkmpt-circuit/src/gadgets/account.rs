@@ -1,14 +1,14 @@
 use halo2_proofs::{
     circuit::{Chip, Region, Value},
     halo2curves::FieldExt,
-    plonk::{Advice, Column, ConstraintSystem, Selector, Error, Expression},
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
 
-use crate::{operation::Account};
+use crate::operation::Account;
 
-use super::{hash_util, table_util::CtrlTransitionKind, kv_util::KeyValue};
 use super::table_util;
+use super::{hash_util, kv_util::KeyValue, table_util::CtrlTransitionKind};
 
 pub const CIRCUIT_ROW: usize = 4;
 const LAST_ROW: usize = CIRCUIT_ROW - 1;
@@ -33,7 +33,6 @@ pub(crate) struct AccountGadget {
 
     state_change_key: Column<Advice>,
     state_change_aux: [Column<Advice>; 2],
-
 }
 
 impl AccountGadget {
@@ -52,10 +51,10 @@ impl AccountGadget {
             .map(|(a, b)| ([a, b, 0], CtrlTransitionKind::Account as u32))
     }
 
-
     /// create gadget from assigned cols, we need:
     /// + circuit selector * 1
-    /// + exported col * 8 (MUST by following sequence: layout_flag, s_enable, old_val, new_val, key_val and 3 ext field for old/new/key_val)
+    /// + exported col * 8 (MUST by following sequence: layout_flag, s_enable,
+    /// old_val, new_val, key_val and 3 ext field for old/new/key_val)
     /// + free col * 4
     pub fn configure<Fp: FieldExt>(
         meta: &mut ConstraintSystem<Fp>,
@@ -106,11 +105,11 @@ impl AccountGadget {
         meta.lookup("account row trans", |meta| {
             let s_enable = meta.query_advice(s_enable, Rotation::cur())
                 * (Expression::Constant(Fp::one()))
-                    - meta.query_advice(s_ctrl_type[0], Rotation::cur());
+                - meta.query_advice(s_ctrl_type[0], Rotation::cur());
             tables.build_lookup(
-                s_enable, 
-                meta.query_advice(ctrl_type, Rotation::prev()), 
-                meta.query_advice(ctrl_type, Rotation::cur()), 
+                s_enable,
+                meta.query_advice(ctrl_type, Rotation::prev()),
+                meta.query_advice(ctrl_type, Rotation::cur()),
                 table_util::CtrlTransitionKind::Account as u64,
             )
         });
@@ -186,13 +185,13 @@ impl AccountGadget {
             let old_nonce = Expression::Constant(Fp::zero());
             let new_nonce = Expression::Constant(Fp::one());
             vec![
-                s_enable.clone() 
-                    * ((new_nonce.clone() - old_nonce.clone())) 
-                    * (new_nonce - old_nonce - Expression::Constant(Fp::one()))
+                s_enable.clone()
+                    * (new_nonce.clone() - old_nonce.clone())
+                    * (new_nonce - old_nonce - Expression::Constant(Fp::one())),
             ]
         });
 
-        // constrain 
+        // constrain
 
         // constraint padding row
         meta.create_gate("padding row", |meta| {
@@ -203,7 +202,6 @@ impl AccountGadget {
 
             vec![s_enable * row3 * (new_root - old_root)]
         });
-
 
         Self {
             s_enable,
@@ -217,13 +215,13 @@ impl AccountGadget {
     }
 
     /// assign data and enable flag for account circuit
-    pub fn assign<'d, Fp:FieldExt>(
+    pub fn assign<'d, Fp: FieldExt>(
         &self,
         region: &mut Region<'_, Fp>,
         offset: usize,
         data: (&'d Account<Fp>, &'d Account<Fp>),
         address: KeyValue<Fp>,
-        apply_last_row: Option<bool>
+        apply_last_row: Option<bool>,
     ) -> Result<usize, Error> {
         let old_acc_chip = AccountChip::<Fp> {
             offset,
@@ -246,12 +244,12 @@ impl AccountGadget {
             data.0.state_root == data.1.state_root
         };
 
-        let end_offset = offset + CIRCUIT_ROW - if apply_last_row {0} else {1};
+        let end_offset = offset + CIRCUIT_ROW - if apply_last_row { 0 } else { 1 };
 
         old_acc_chip.assign(region)?;
         new_acc_chip.assign(region)?;
 
-         // overwrite the datalimb in first row for address
+        // overwrite the datalimb in first row for address
         for (col, val) in [
             (old_acc_chip.config.intermediate_1, address.limb_0()),
             (new_acc_chip.config.intermediate_1, address.limb_1()),
@@ -268,22 +266,23 @@ impl AccountGadget {
                 || Value::known(Fp::one()),
             )?;
             region.assign_advice(
-                || "account circuit rows", 
-                self.ctrl_type, offset, 
-                || Value::known(Fp::from(index as u64))
+                || "account circuit rows",
+                self.ctrl_type,
+                offset,
+                || Value::known(Fp::from(index as u64)),
             )?;
             region.assign_advice(
-                ||"enable s_ctrl", 
-                self.s_ctrl_type[index], 
-                offset, 
+                || "enable s_ctrl",
+                self.s_ctrl_type[index],
+                offset,
                 || Value::known(Fp::zero()),
             )?;
             if index == LAST_ROW {
                 region.assign_advice(
-                    || "padding last row", 
-                    self.old_state.intermediate_2, 
-                    offset, 
-                    ||Value::known(Fp::zero()),
+                    || "padding last row",
+                    self.old_state.intermediate_2,
+                    offset,
+                    || Value::known(Fp::zero()),
                 )?;
                 region.assign_advice(
                     || "padding last row",
@@ -295,7 +294,10 @@ impl AccountGadget {
             let data_delta = match index {
                 0 => [data.0.nonce - data.1.nonce, Fp::zero()],
                 1 => [data.0.gas_balance - data.1.gas_balance, Fp::zero()],
-                2 => [data.0.recrusive_tx_hash - data.1.recrusive_tx_hash, Fp::zero()],
+                2 => [
+                    data.0.recrusive_tx_hash - data.1.recrusive_tx_hash,
+                    Fp::zero(),
+                ],
                 3 => [data.0.state_root - data.1.state_root, Fp::zero()],
                 _ => unreachable!("no such row number"),
             };
@@ -332,11 +334,9 @@ impl AccountGadget {
                     })
                 },
             )?;
-
         }
 
         Ok(end_offset)
-
     }
 }
 
@@ -453,9 +453,9 @@ impl<'d, Fp: FieldExt> AccountChip<'d, Fp> {
         // fill the connected circuit
         let offset = self.offset - 1;
         region.assign_advice(
-            || "account hash final", 
-            config.acc_data_fields, 
-            offset, 
+            || "account hash final",
+            config.acc_data_fields,
+            offset,
             || Value::known(data.account_hash()),
         )?;
 
@@ -480,7 +480,7 @@ impl<'d, Fp: FieldExt> AccountChip<'d, Fp> {
                 config.intermediate_1,
                 [Fp::zero(), data.hash_traces(2), data.hash_traces(0)],
                 "intermediate 1",
-            )
+            ),
         ] {
             for (i, val) in vals.iter().enumerate() {
                 region.assign_advice(
@@ -490,7 +490,7 @@ impl<'d, Fp: FieldExt> AccountChip<'d, Fp> {
                     || Value::known(*val),
                 )?;
             }
-         }
+        }
 
         // row 4: notice this is not belong to account chip in general
         region.assign_advice(
@@ -511,20 +511,19 @@ impl<'d, Fp: FieldExt> AccountChip<'d, Fp> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     #![allow(unused_imports)]
-    use halo2_proofs::circuit::{SimpleFloorPlanner, Layouter, Value};
+    use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
     use halo2_proofs::dev::MockProver;
-    use halo2_proofs::plonk::{Circuit, Selector, Advice, Column, ConstraintSystem, Error};
+    use halo2_proofs::plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector};
     use hash_circuit::Hashable;
 
-    use crate::gadgets::{table_util, hash_util};
+    use crate::gadgets::{hash_util, table_util};
     use crate::operation::Account;
 
-    use crate::test_utils::{rand_fp, mock_hash, hash_str_to_fp};
-    use crate::{test_utils::Fp};
+    use crate::test_utils::Fp;
+    use crate::test_utils::{hash_str_to_fp, mock_hash, rand_fp};
 
     use super::{AccountGadget, CIRCUIT_ROW};
 
@@ -591,9 +590,9 @@ mod tests {
         }
 
         fn synthesize(
-            &self, 
-            config: Self::Config, 
-            mut layouter: impl Layouter<Fp>
+            &self,
+            config: Self::Config,
+            mut layouter: impl Layouter<Fp>,
         ) -> Result<(), Error> {
             // initialize the op table
             config
@@ -611,7 +610,7 @@ mod tests {
 
             layouter.assign_region(
                 || "account",
-                |mut region | {
+                |mut region| {
                     for col in config.free_cols {
                         region.assign_advice(
                             || "flush top row",
@@ -654,16 +653,16 @@ mod tests {
                 },
             )
         }
-
-        
     }
 
     #[test]
-    fn test_single_account(){
+    fn test_single_account() {
         let acc_data = Account::<Fp> {
             gas_balance: Fp::from(100000u64),
             address: hash_str_to_fp("0x1c5a77d9fa7ef466951b2f01f724bca3a5820b63"),
-            account_key: hash_str_to_fp("0x0178efc3d95dd411bac18637d49d8d2fd35f9f5f6e0dac461a8b5e31914f85a8"),
+            account_key: hash_str_to_fp(
+                "0x0178efc3d95dd411bac18637d49d8d2fd35f9f5f6e0dac461a8b5e31914f85a8",
+            ),
             nonce: Fp::from(42u64),
             state_root: rand_fp(),
             ..Default::default()
