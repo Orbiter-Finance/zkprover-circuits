@@ -279,6 +279,11 @@ mod tests {
     };
 
     #[test]
+    fn gen_params() {
+        
+    }
+
+    #[test]
     fn test_verifier() {
         let params = gen_srs(10);
 

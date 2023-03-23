@@ -7,6 +7,7 @@ use halo2_proofs::{
     halo2curves::{
         bn256::Fr,
         group::GroupEncoding,
+        pairing::MultiMillerLoop,
         secp256k1::{self, Secp256k1Affine, Secp256k1Compressed},
     },
     plonk::{Circuit, ConstraintSystem, Error},
@@ -14,6 +15,7 @@ use halo2_proofs::{
 use itertools::Itertools;
 
 use jsonrpsee::tracing::log::error;
+use rand::rngs::OsRng;
 /// Represents a point in bytes.
 #[derive(Copy, Clone)]
 pub struct Serialized([u8; 64]);
@@ -39,6 +41,7 @@ use crate::{
     },
     operation::AccountOp,
     serde::{Hash, MPTTransTrace},
+    verifier::circuit_deploy::TargetCircuit,
     ERC4337::bundler::{BundlerRpcData, Transaction, Word},
 };
 
@@ -115,16 +118,47 @@ impl<Fp: FieldExt, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_N
     }
 }
 
+pub struct IntergrateCircuit;
+
+impl<E: MultiMillerLoop> TargetCircuit<E> for IntergrateCircuit {
+    const TARGET_CIRCUIT_K: u32 = 7;
+    const PUBLIC_INPUT_SIZE: usize = 1;
+    const N_PROOFS: usize = 2;
+    const NAME: &'static str = "zkProver_circuit";
+    const PARAMS_NAME: &'static str = "zkProver_circuit";
+    const READABLE_VKEY: bool = true;
+
+    type Circuit = ZkProverCircuit<E::Scalar, 128>;
+
+    fn instance_builder() -> (Self::Circuit, Vec<Vec<E::Scalar>>) {
+        let circuit = ZkProverCircuit {
+            mpt_root_before: todo!(),
+            mpt_root_after: todo!(),
+            txs: todo!(),
+            chain_id: todo!(),
+        };
+        let instances = vec![];
+        (circuit, instances)
+    }
+
+    fn load_instances(buf: &[u8]) -> Vec<Vec<Vec<E::Scalar>>> {
+        vec![vec![]]
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
     use std::{fs::File, io::Read};
 
-    use halo2_proofs::{dev::MockProver, halo2curves::secp256k1::Fp};
+    use halo2_proofs::{
+        dev::MockProver,
+        halo2curves::{bn256::Bn256, secp256k1::Fp},
+    };
 
-    use crate::ERC4337::bundler::BundlerRpcData;
+    use crate::{verifier::circuit_deploy::sample_circuit_setup, ERC4337::bundler::BundlerRpcData};
 
-    use super::ZkProverCircuit;
+    use super::{ZkProverCircuit, IntergrateCircuit};
     #[test]
     fn test_zkprover_circuit() {
         let mut buffer = Vec::new();
@@ -152,5 +186,7 @@ mod tests {
     }
 
     #[test]
-    fn test_circuit_consistency() {}
+    fn test_circuit_setup_data() {
+        sample_circuit_setup::<Bn256, IntergrateCircuit>("output/".into());
+    }
 }

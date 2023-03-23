@@ -169,10 +169,10 @@ pub fn recover_pk(
     let address = Address::from_slice(&pk_hash[12..]);
 
     // debug_assert_eq!(address, add);
-    if ! address.eq(&add) {
+    if !address.eq(&add) {
         return Err(libsecp256k1::Error::InvalidSignature);
     }
-    
+
     let pk_le = pk_bytes_swap_endianness(&pk_be[1..]);
     let x = ct_option_ok_or(
         secp256k1::Fp::from_bytes(pk_le[..32].try_into().unwrap()),

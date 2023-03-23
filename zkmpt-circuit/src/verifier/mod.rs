@@ -25,6 +25,7 @@ use bytes::Bytes;
 use std::fs::File;
 use std::io::prelude::*;
 
+pub mod circuit_deploy;
 mod halo2_verify;
 /// Halo2 loader
 pub mod loader;
