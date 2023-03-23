@@ -103,7 +103,7 @@ impl<Fp: FieldExt, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_N
             .txs
             .iter()
             .map(|tx| {
-                tx.sign_1559_data().map_err(|e| {
+                tx.sign_data().map_err(|e| {
                     error!("tx_to_sign_data error for tx {:?}", tx);
                     e
                 })

@@ -65,8 +65,8 @@ impl From<&Transaction> for Eip1559TransactionRequest {
             data: Some(tx.call_data.clone()),
             nonce: Some(tx.nonce),
             access_list: tx.access_list.clone(),
-            max_priority_fee_per_gas: Some(tx.gas_fee_cap),
-            max_fee_per_gas: Some(tx.gas_tip_cap),
+            max_priority_fee_per_gas: tx.gas_fee_cap,
+            max_fee_per_gas: tx.gas_tip_cap,
             chain_id: Some(tx.chain_id),
             ..Default::default()
         }

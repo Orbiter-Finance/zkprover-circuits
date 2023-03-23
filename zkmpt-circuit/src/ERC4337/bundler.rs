@@ -27,6 +27,7 @@ use serde::{
 
 use crate::{
     gadgets::{ToBigEndian, ToLittleEndian},
+    serde::Hash,
     ERC4337::geth_types::Error as BundlerError,
 };
 use itertools::Itertools;
@@ -64,8 +65,8 @@ pub struct BundlerRpcTxData {
     pub s: U256,
     pub r#type: U256,
     pub access_list: AccessList,
-    pub max_priority_fee_per_gas: U256,
-    pub max_fee_per_gas: U256,
+    pub max_priority_fee_per_gas: Option<U256>,
+    pub max_fee_per_gas: Option<U256>,
     pub chain_id: U64,
 }
 
@@ -106,9 +107,9 @@ pub struct Transaction {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gas_price: Option<Word>,
     /// Gas fee cap
-    pub gas_fee_cap: Word,
+    pub gas_fee_cap: Option<Word>,
     /// Gas tip cap
-    pub gas_tip_cap: Word,
+    pub gas_tip_cap: Option<Word>,
     /// The compiled code of a contract OR the first 4 bytes of the hash of the
     /// invoked method signature and encoded parameters. For details see
     /// Ethereum Contract ABI
@@ -157,9 +158,7 @@ pub fn recover_pk(
     let signature = libsecp256k1::Signature::parse_standard(&sig_bytes)?;
     let msg_hash = libsecp256k1::Message::parse_slice(msg_hash.as_slice())?;
     let recovery_id = libsecp256k1::RecoveryId::parse(v)?;
-    println!("recovery_id ${:?}", recovery_id);
     let pk = libsecp256k1::recover(&msg_hash, &signature, &recovery_id)?;
-    println!("recovery pk {:?}", pk);
     let pk_be = pk.serialize();
     debug_assert_eq!(pk_be[0], 0x04);
     let pk_hash: [u8; 32] = Keccak256::digest(&pk_be[1..])
@@ -168,7 +167,12 @@ pub fn recover_pk(
         .try_into()
         .expect("hash length isn't 32 bytes");
     let address = Address::from_slice(&pk_hash[12..]);
+
     // debug_assert_eq!(address, add);
+    if ! address.eq(&add) {
+        return Err(libsecp256k1::Error::InvalidSignature);
+    }
+    
     let pk_le = pk_bytes_swap_endianness(&pk_be[1..]);
     let x = ct_option_ok_or(
         secp256k1::Fp::from_bytes(pk_le[..32].try_into().unwrap()),
@@ -209,13 +213,17 @@ impl Transaction {
         )?;
         // msg = rlp([nonce, gasPrice, gas, to, value, data, sig_v, r, s])
         let req: Eip1559TransactionRequest = self.into();
-
+        println!("1559 REQ {:?}", &req);
         let msg = req.chain_id(chain_id).rlp();
+
+        println!("RLP Code === {:?}", &msg);
         let msg_hash: [u8; 32] = Keccak256::digest(&msg)
             .as_slice()
             .to_vec()
             .try_into()
             .expect("hash length isn't 32 bytes");
+
+        println!("RLP Hash ==== {:?}", hex::encode(&msg_hash));
 
         // let v = self
         //     .v
@@ -240,7 +248,8 @@ impl Transaction {
             msg_hash,
         })
     }
-    pub(crate) fn sign_data(&self, chain_id: u64) -> Result<SignData, BundlerError> {
+    pub(crate) fn sign_data(&self) -> Result<SignData, BundlerError> {
+        let chain_id = self.chain_id.as_u64();
         let sig_r_le = self.r.to_le_bytes();
         let sig_s_le = self.s.to_le_bytes();
         let sig_r = ct_option_ok_or(
@@ -327,6 +336,7 @@ mod tests {
             .tx_list;
 
         let txs: Vec<Transaction> = rpc_txs.iter().map(|tr| tr.try_into().unwrap()).collect();
+        println!("txs ${:?}", txs);
         // txs.iter()
         //     .map(|tx| {
         //         tx.sign_1559_data(4337).map_err(|e| {
