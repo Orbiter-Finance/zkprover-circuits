@@ -8,11 +8,11 @@ use halo2_proofs::{
 };
 
 #[derive(Clone)]
-struct Number<F: FieldExt>(AssignedCell<F, F>);
+pub struct Number<F: FieldExt>(AssignedCell<F, F>);
 
 // Config that contains the columns used in the circuit
 #[derive(Debug, Clone)]
-struct SumConfig {
+pub struct SumConfig {
     pre_sum: Column<Advice>,
     element: Column<Advice>,
     post_sum: Column<Advice>,
@@ -21,7 +21,8 @@ struct SumConfig {
 }
 
 // The chip that configures the gate and fills in the witness
-struct SumChip<F: FieldExt> {
+#[derive(Debug, Clone)]
+pub struct SumChip<F: FieldExt> {
     config: SumConfig,
     _marker: PhantomData<F>,
 }
@@ -34,7 +35,7 @@ impl<F: FieldExt> SumChip<F> {
         }
     }
 
-    fn configure(meta: &mut ConstraintSystem<F>) -> SumConfig {
+    pub fn configure(meta: &mut ConstraintSystem<F>) -> SumConfig {
         // create columns
         let pre_sum = meta.advice_column();
         let element = meta.advice_column();
@@ -157,12 +158,29 @@ impl<F: FieldExt> SumChip<F> {
     ) -> Result<(), Error> {
         layouter.constrain_instance(num.0.cell(), self.config.sum, row)
     }
+
+    pub fn constraint_list_sum(
+        &self,
+        mut layouter: impl Layouter<F>,
+        element_list: &Vec<Value<F>>,
+        zero: Value<F>,
+    ) -> Result<(), Error> {
+        let (_, _, mut post_sum) =
+            self.load_first_row(layouter.namespace(|| "first row"), element_list[0], zero)?;
+        for i in 1..element_list.len() {
+            let new_sum_acc =
+                self.load_row(layouter.namespace(|| "row"), &post_sum, element_list[i])?;
+            post_sum = new_sum_acc;
+        }
+        self.expose_public(layouter.namespace(|| "expose sum"), post_sum, 0)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
 
-    use halo2_proofs::circuit::{SimpleFloorPlanner, Layouter};
+    use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner};
     use halo2_proofs::dev::circuit_dot_graph;
     use halo2_proofs::halo2curves::FieldExt;
     use halo2_proofs::plonk::{Circuit, ConstraintSystem, Error};
@@ -170,7 +188,7 @@ mod tests {
     use num::Zero;
     use num_bigint::BigUint;
 
-    use super::{SumConfig, SumChip};
+    use super::{SumChip, SumConfig};
 
     fn get_hashes_sum(hashes_num: Vec<BigUint>) -> BigUint {
         let mut sum = BigUint::zero();
@@ -202,30 +220,15 @@ mod tests {
         fn synthesize(
             &self,
             config: Self::Config,
-            mut layouter: impl Layouter<F>,
+            layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
             let chip = SumChip::construct(config);
-            let (_, _, mut post_sum) = chip.load_first_row(
-                layouter.namespace(|| "99first row"),
-                self.element_list[0],
-                self.zero,
-            )?;
-            for i in 1..self.element_list.len() {
-                let new_sum_acc = chip.load_row(
-                    layouter.namespace(|| "row"),
-                    &post_sum,
-                    self.element_list[i],
-                )?;
-                post_sum = new_sum_acc;
-            }
-            chip.expose_public(layouter.namespace(|| "expose sum"), post_sum, 0)?;
-            Ok(())
+            chip.constraint_list_sum(layouter, &self.element_list, self.zero)
         }
     }
 
     #[test]
     fn test_sum_hashes() {
-
         // Instantiate the circuit with the private inputs.
         let circuit = SumCircuit {
             element_list: vec![
@@ -251,8 +254,7 @@ mod tests {
 
         // If we try some other public input, the proof will fail!
         public_inputs = vec![Fp::from(14)];
-        let prover = MockProver::run(k, &circuit,
-        vec![public_inputs]).unwrap(); assert!(prover.verify().
-        is_err());
+        let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
+        assert!(prover.verify().is_err());
     }
 }
