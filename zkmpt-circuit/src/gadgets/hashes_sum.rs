@@ -12,30 +12,37 @@ pub struct Number<F: FieldExt>(AssignedCell<F, F>);
 
 // Config that contains the columns used in the circuit
 #[derive(Debug, Clone)]
-pub struct SumConfig {
+pub struct SumConfig<F: FieldExt> {
     pre_sum: Column<Advice>,
     element: Column<Advice>,
     post_sum: Column<Advice>,
     sum: Column<Instance>,
     s: Selector,
+    _marker: PhantomData<F>,
 }
 
 // The chip that configures the gate and fills in the witness
 #[derive(Debug, Clone)]
 pub struct SumChip<F: FieldExt> {
-    config: SumConfig,
-    _marker: PhantomData<F>,
+    pub _marker: PhantomData<F>,
+}
+
+impl<F: FieldExt> Default for SumChip<F> {
+    fn default() -> Self {
+        Self {
+            _marker: PhantomData::default(),
+        }
+    }
 }
 
 impl<F: FieldExt> SumChip<F> {
-    fn construct(config: SumConfig) -> Self {
+    fn construct() -> Self {
         Self {
-            config,
             _marker: PhantomData,
         }
     }
 
-    pub fn configure(meta: &mut ConstraintSystem<F>) -> SumConfig {
+    pub fn configure(meta: &mut ConstraintSystem<F>) -> SumConfig<F> {
         // create columns
         let pre_sum = meta.advice_column();
         let element = meta.advice_column();
@@ -65,12 +72,14 @@ impl<F: FieldExt> SumChip<F> {
             post_sum,
             sum,
             s,
+            _marker: PhantomData,
         }
     }
 
     fn load_first_row(
         &self,
         mut layouter: impl Layouter<F>,
+        config: &SumConfig<F>,
         first_element: Value<F>,
         zero: Value<F>,
     ) -> Result<(Number<F>, Number<F>, Number<F>), Error> {
@@ -79,19 +88,19 @@ impl<F: FieldExt> SumChip<F> {
             || "first row",
             |mut region| {
                 // enable the selector
-                self.config.s.enable(&mut region, 0)?;
+                config.s.enable(&mut region, 0)?;
 
                 let first_pre_sum = region
-                    .assign_advice(|| "first_pre_sum", self.config.pre_sum, 0, || zero)
+                    .assign_advice(|| "first_pre_sum", config.pre_sum, 0, || zero)
                     .map(Number)?;
 
                 let first_element_num = region
-                    .assign_advice(|| "first_element", self.config.element, 0, || first_element)
+                    .assign_advice(|| "first_element", config.element, 0, || first_element)
                     .map(Number)?;
                 let first_post_sum = region
                     .assign_advice(
                         || "first_post_sum",
-                        self.config.post_sum,
+                        config.post_sum,
                         0,
                         || zero + first_element,
                     )
@@ -105,6 +114,7 @@ impl<F: FieldExt> SumChip<F> {
     fn load_row(
         &self,
         mut layouter: impl Layouter<F>,
+        config: &SumConfig<F>,
         post_sum_num_ref: &Number<F>,
         element: Value<F>,
     ) -> Result<Number<F>, Error> {
@@ -112,19 +122,16 @@ impl<F: FieldExt> SumChip<F> {
             || "row",
             |mut region| {
                 // enable the selector
-                self.config.s.enable(&mut region, 0)?;
+                config.s.enable(&mut region, 0)?;
 
                 // copy the cell from previous row
 
-                post_sum_num_ref.0.copy_advice(
-                    || "pre_sum",
-                    &mut region,
-                    self.config.pre_sum,
-                    0,
-                )?;
+                post_sum_num_ref
+                    .0
+                    .copy_advice(|| "pre_sum", &mut region, config.pre_sum, 0)?;
 
                 let element_num = region
-                    .assign_advice(|| "element", self.config.element, 0, || element)
+                    .assign_advice(|| "element", config.element, 0, || element)
                     .map(Number)?;
 
                 let element_num_ref = &element_num;
@@ -132,7 +139,7 @@ impl<F: FieldExt> SumChip<F> {
                 let post_sum_num = region
                     .assign_advice(
                         || "sum_acc",
-                        self.config.post_sum,
+                        config.post_sum,
                         0,
                         || {
                             (post_sum_num_ref.0.value().and_then(|post_sum_num_ref| {
@@ -153,26 +160,36 @@ impl<F: FieldExt> SumChip<F> {
     fn expose_public(
         &self,
         mut layouter: impl Layouter<F>,
+        config: &SumConfig<F>,
         num: Number<F>,
         row: usize,
     ) -> Result<(), Error> {
-        layouter.constrain_instance(num.0.cell(), self.config.sum, row)
+        layouter.constrain_instance(num.0.cell(), config.sum, row)
     }
 
     pub fn constraint_list_sum(
         &self,
         mut layouter: impl Layouter<F>,
+        config: &SumConfig<F>,
         element_list: &Vec<Value<F>>,
         zero: Value<F>,
     ) -> Result<(), Error> {
-        let (_, _, mut post_sum) =
-            self.load_first_row(layouter.namespace(|| "first row"), element_list[0], zero)?;
+        let (_, _, mut post_sum) = self.load_first_row(
+            layouter.namespace(|| "first row"),
+            config,
+            element_list[0],
+            zero,
+        )?;
         for i in 1..element_list.len() {
-            let new_sum_acc =
-                self.load_row(layouter.namespace(|| "row"), &post_sum, element_list[i])?;
+            let new_sum_acc = self.load_row(
+                layouter.namespace(|| "row"),
+                config,
+                &post_sum,
+                element_list[i],
+            )?;
             post_sum = new_sum_acc;
         }
-        self.expose_public(layouter.namespace(|| "expose sum"), post_sum, 0)?;
+        self.expose_public(layouter.namespace(|| "expose sum"), config, post_sum, 0)?;
         Ok(())
     }
 }
@@ -206,7 +223,7 @@ mod tests {
     }
 
     impl<F: FieldExt> Circuit<F> for SumCircuit<F> {
-        type Config = SumConfig;
+        type Config = SumConfig<F>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
@@ -222,8 +239,8 @@ mod tests {
             config: Self::Config,
             layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
-            let chip = SumChip::construct(config);
-            chip.constraint_list_sum(layouter, &self.element_list, self.zero)
+            let chip = SumChip::construct();
+            chip.constraint_list_sum(layouter, &config, &self.element_list, self.zero)
         }
     }
 

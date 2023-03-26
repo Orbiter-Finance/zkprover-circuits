@@ -4,6 +4,7 @@ pub mod account;
 pub mod ecsdsa;
 pub mod hash_poseidon;
 pub mod hash_util;
+pub mod hashes_sum;
 pub mod kv_util;
 pub mod layer;
 pub mod mpt;

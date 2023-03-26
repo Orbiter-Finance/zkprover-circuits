@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 hash-circuit = { package = "poseidon-circuit", git = "https://github.com/ZeroKPunk/poseidon-circuit.git", branch = "scroll-dev-0215"}
-halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_02_02" }
+halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_02_02", features = ["dev-graph"]}
 halo2_gadgets = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_02_02" }
 ecdsa = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_02_02" }
 ecc = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_02_02" }

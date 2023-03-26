@@ -41,7 +41,8 @@ fn gen_pk<C: Circuit<Fr>>(params: &ParamsKZG<Bn256>, circuit: &C) -> ProvingKey<
     keygen_pk(params, vk, circuit).unwrap()
 }
 
-fn gen_proof<C: Circuit<Fr>>(
+// Generate Proof
+pub fn gen_proof<C: Circuit<Fr>>(
     params: &ParamsKZG<Bn256>,
     pk: &ProvingKey<G1Affine>,
     circuit: C,
@@ -72,7 +73,7 @@ fn gen_proof<C: Circuit<Fr>>(
     proof
 }
 
-fn gen_evm_verifier(
+pub fn gen_evm_verifier(
     params: &ParamsKZG<Bn256>,
     vk: &VerifyingKey<G1Affine>,
     num_instance: Vec<usize>,
@@ -102,7 +103,7 @@ fn gen_evm_verifier(
     evm::compile_yul(&loader.yul_code())
 }
 
-fn evm_verify(deployment_code: Vec<u8>, instances: Vec<Vec<Fr>>, proof: Vec<u8>) {
+pub fn evm_verify(deployment_code: Vec<u8>, instances: Vec<Vec<Fr>>, proof: Vec<u8>) {
     let calldata = encode_calldata(&instances, &proof);
     println!("proof calldata: {:?}", calldata);
     let mut evm = ExecutorBuilder::default()

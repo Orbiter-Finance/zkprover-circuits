@@ -279,9 +279,7 @@ mod tests {
     };
 
     #[test]
-    fn gen_params() {
-        
-    }
+    fn gen_params() {}
 
     #[test]
     fn test_verifier() {
