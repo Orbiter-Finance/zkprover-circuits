@@ -189,7 +189,8 @@ impl<F: FieldExt> SumChip<F> {
             )?;
             post_sum = new_sum_acc;
         }
-        // self.expose_public(layouter.namespace(|| "expose sum"), config, post_sum, 0)?;
+        // self.expose_public(layouter.namespace(|| "expose sum"), config, post_sum,
+        // 0)?;
         Ok(post_sum)
     }
 }
@@ -240,7 +241,9 @@ mod tests {
             mut layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
             let chip = SumChip::construct();
-            let post_sum = chip.constraint_list_sum(&mut layouter, &config, &self.element_list, self.zero).unwrap();
+            let post_sum = chip
+                .constraint_list_sum(&mut layouter, &config, &self.element_list, self.zero)
+                .unwrap();
 
             chip.expose_public(layouter.namespace(|| "expose sum"), &config, post_sum, 0)
         }

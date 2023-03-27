@@ -1,30 +1,14 @@
 use std::marker::PhantomData;
 
-use ethers::{types::Address, utils::rlp::RlpStream};
 use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{Layouter, SimpleFloorPlanner, Value},
-    halo2curves::{
-        bn256::Fr,
-        group::GroupEncoding,
-        pairing::{Engine, MultiMillerLoop},
-        secp256k1::{self, Secp256k1Affine, Secp256k1Compressed},
-        serde::SerdeObject,
-    },
-    plonk::{create_proof, Circuit, ConstraintSystem, Error, ProvingKey},
-    poly::{
-        commitment::CommitmentScheme,
-        kzg::{
-            commitment::{KZGCommitmentScheme, ParamsKZG},
-            multiopen::ProverGWC,
-        },
-    },
-    transcript::{Blake2bWrite, Challenge255, TranscriptWriterBuffer},
+    halo2curves::pairing::MultiMillerLoop,
+    plonk::{Circuit, ConstraintSystem, Error},
 };
 use itertools::Itertools;
 
 use jsonrpsee::tracing::log::error;
-use rand::{rngs::OsRng, Rng};
 use std::fmt::Debug;
 
 use crate::gadgets::hashes_sum::{SumChip, SumConfig};
@@ -46,16 +30,8 @@ impl AsMut<[u8]> for Serialized {
 }
 
 use crate::{
-    gadgets::{
-        ecsdsa::Spec256k1Gadget,
-        sign_verify::{pk_bytes_swap_endianness, SignData},
-        table_util::MPTProofType,
-        ToBigEndian, ToLittleEndian,
-    },
-    operation::AccountOp,
-    serde::{Hash, MPTTransTrace},
-    verifier::circuit_deploy::TargetCircuit,
-    ERC4337::bundler::{BundlerRpcData, Transaction, Word},
+    gadgets::sign_verify::SignData, serde::Hash, verifier::circuit_deploy::TargetCircuit,
+    ERC4337::bundler::Transaction,
 };
 
 // entry point
@@ -130,7 +106,11 @@ impl<Fp: FieldExt, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_N
         ZkProverCircuitConfig::new(meta)
     }
 
-    fn synthesize(&self, config: Self::Config, mut layouter: impl Layouter<Fp>,) -> Result<(), Error> {
+    fn synthesize(
+        &self,
+        config: Self::Config,
+        mut layouter: impl Layouter<Fp>,
+    ) -> Result<(), Error> {
         let sign_datas: Vec<SignData> = self
             .txs
             .iter()
@@ -145,16 +125,21 @@ impl<Fp: FieldExt, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_N
 
         // let sum_chip =
         // config.sum_config.
-        let hash_sum = self.hash_sum_chip.constraint_list_sum(
-            &mut layouter,
-            &config.sum_config,
-            &self.mock_hashes_element,
-            self.mock_zero,
-        ).unwrap();
+        let hash_sum = self
+            .hash_sum_chip
+            .constraint_list_sum(
+                &mut layouter,
+                &config.sum_config,
+                &self.mock_hashes_element,
+                self.mock_zero,
+            )
+            .unwrap();
 
         // start expose public inputs
 
-        self.hash_sum_chip.expose_public(layouter, &config.sum_config, hash_sum, 0).unwrap();
+        self.hash_sum_chip
+            .expose_public(layouter, &config.sum_config, hash_sum, 0)
+            .unwrap();
 
         // end expose public inputs
 
