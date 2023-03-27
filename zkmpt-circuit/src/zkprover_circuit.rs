@@ -130,7 +130,7 @@ impl<Fp: FieldExt, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_N
         ZkProverCircuitConfig::new(meta)
     }
 
-    fn synthesize(&self, config: Self::Config, layouter: impl Layouter<Fp>) -> Result<(), Error> {
+    fn synthesize(&self, config: Self::Config, mut layouter: impl Layouter<Fp>,) -> Result<(), Error> {
         let sign_datas: Vec<SignData> = self
             .txs
             .iter()
@@ -145,12 +145,18 @@ impl<Fp: FieldExt, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_N
 
         // let sum_chip =
         // config.sum_config.
-        self.hash_sum_chip.constraint_list_sum(
-            layouter,
+        let hash_sum = self.hash_sum_chip.constraint_list_sum(
+            &mut layouter,
             &config.sum_config,
             &self.mock_hashes_element,
             self.mock_zero,
-        );
+        ).unwrap();
+
+        // start expose public inputs
+
+        self.hash_sum_chip.expose_public(layouter, &config.sum_config, hash_sum, 0).unwrap();
+
+        // end expose public inputs
 
         Ok(())
     }
@@ -204,7 +210,6 @@ mod tests {
         halo2curves::{bn256::Bn256, pairing::Engine},
         plonk::keygen_pk,
     };
-    use k256::elliptic_curve::bigint::Integer;
 
     use crate::{
         verifier::{
@@ -263,9 +268,9 @@ mod tests {
         let params = load_target_circuit_params::<Bn256, IntergrateCircuit>(&mut folder);
         let vk = load_target_circuit_vk::<Bn256, IntergrateCircuit>(&mut folder, &params);
         let pk = keygen(&params, circuit.clone()).unwrap();
-        let deployment_code = gen_evm_verifier(&params, pk.get_vk(), vec![]);
-        // let proof_bytes = gen_proof(&params, &pk, circuit, vec![]);
-        // evm_verify(deployment_code, vec![], proof_bytes);
+        let deployment_code = gen_evm_verifier(&params, pk.get_vk(), vec![1]);
+        let proof_bytes = gen_proof(&params, &pk, circuit, vec![vec![Fp::from(15)]]);
+        evm_verify(deployment_code, vec![vec![Fp::from(15)]], proof_bytes);
 
         // println!("proof_bytes {:?}", hex::encode(proof_bytes));
     }

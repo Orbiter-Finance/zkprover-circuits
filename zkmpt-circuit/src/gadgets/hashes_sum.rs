@@ -157,7 +157,7 @@ impl<F: FieldExt> SumChip<F> {
         )
     }
 
-    fn expose_public(
+    pub fn expose_public(
         &self,
         mut layouter: impl Layouter<F>,
         config: &SumConfig<F>,
@@ -169,11 +169,11 @@ impl<F: FieldExt> SumChip<F> {
 
     pub fn constraint_list_sum(
         &self,
-        mut layouter: impl Layouter<F>,
+        layouter: &mut impl Layouter<F>,
         config: &SumConfig<F>,
         element_list: &Vec<Value<F>>,
         zero: Value<F>,
-    ) -> Result<(), Error> {
+    ) -> Result<Number<F>, Error> {
         let (_, _, mut post_sum) = self.load_first_row(
             layouter.namespace(|| "first row"),
             config,
@@ -189,8 +189,8 @@ impl<F: FieldExt> SumChip<F> {
             )?;
             post_sum = new_sum_acc;
         }
-        self.expose_public(layouter.namespace(|| "expose sum"), config, post_sum, 0)?;
-        Ok(())
+        // self.expose_public(layouter.namespace(|| "expose sum"), config, post_sum, 0)?;
+        Ok(post_sum)
     }
 }
 
@@ -237,10 +237,12 @@ mod tests {
         fn synthesize(
             &self,
             config: Self::Config,
-            layouter: impl Layouter<F>,
+            mut layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
             let chip = SumChip::construct();
-            chip.constraint_list_sum(layouter, &config, &self.element_list, self.zero)
+            let post_sum = chip.constraint_list_sum(&mut layouter, &config, &self.element_list, self.zero).unwrap();
+
+            chip.expose_public(layouter.namespace(|| "expose sum"), &config, post_sum, 0)
         }
     }
 
