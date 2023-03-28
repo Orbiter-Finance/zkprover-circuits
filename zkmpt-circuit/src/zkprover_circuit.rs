@@ -62,7 +62,9 @@ pub struct ZkProverCircuit<Fp: FieldExt, const TX_NUM: usize> {
     pub chain_id: u64,
 
     pub hash_sum_chip: SumChip<Fp>,
+    // pub tx_verify_chip:
 
+    // for the test mock data
     pub mock_hashes_element: Vec<Value<Fp>>,
     pub mock_hashes_sum: Value<Fp>,
     pub mock_zero: Value<Fp>,
@@ -123,8 +125,6 @@ impl<Fp: FieldExt, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_N
             .try_collect()
             .unwrap();
 
-        // let sum_chip =
-        // config.sum_config.
         let hash_sum = self
             .hash_sum_chip
             .constraint_list_sum(
@@ -137,6 +137,7 @@ impl<Fp: FieldExt, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_N
 
         // start expose public inputs
 
+        // for the Tx hashes Sum
         self.hash_sum_chip
             .expose_public(layouter, &config.sum_config, hash_sum, 0)
             .unwrap();

@@ -2,6 +2,7 @@ use ethers::types::U256;
 
 pub mod account;
 pub mod ecsdsa;
+pub mod gas_ticket;
 pub mod hash_poseidon;
 pub mod hash_util;
 pub mod hashes_sum;
