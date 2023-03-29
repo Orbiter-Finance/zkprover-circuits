@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{fs::File, io::Read, marker::PhantomData};
 
 use halo2_proofs::{
     arithmetic::FieldExt,
@@ -11,7 +11,21 @@ use itertools::Itertools;
 use jsonrpsee::tracing::log::error;
 use std::fmt::Debug;
 
-use crate::gadgets::hashes_sum::{SumChip, SumConfig};
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub static ref MOCK_RPC_TXS: BundlerRpcData = {
+        let mut buffer = Vec::new();
+        let mut f = File::open("src/ERC4337/rpc_data_test.json").unwrap();
+        f.read_to_end(&mut buffer).unwrap();
+        serde_json::from_slice::<BundlerRpcData>(&buffer).unwrap()
+    };
+}
+
+use crate::{
+    gadgets::hashes_sum::{SumChip, SumConfig},
+    ERC4337::bundler::BundlerRpcData,
+};
 
 /// Represents a point in bytes.
 #[derive(Copy, Clone)]
@@ -51,7 +65,7 @@ impl<Fp: FieldExt> ZkProverCircuitConfig<Fp> {
     }
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug)]
 pub struct ZkProverCircuit<Fp: FieldExt, const TX_NUM: usize> {
     // the maxium records in circuits (would affect vk)
     pub mpt_root_before: Fp,
@@ -70,25 +84,86 @@ pub struct ZkProverCircuit<Fp: FieldExt, const TX_NUM: usize> {
     pub mock_zero: Value<Fp>,
 }
 
-impl<Fp: FieldExt, const TX_NUM: usize> ZkProverCircuit<Fp, TX_NUM> {
-    // Constructs a new ZkProverCircuit
-    pub fn new(
-        start_mpt_root_hash: Hash,
-        end_mpt_root_hash: Hash,
-        txs: Vec<Transaction>,
-        chain_id: u64,
-    ) -> Self {
-        // let start_mpt_root = start_mpt_root_hash.
+impl<Fp: FieldExt, const TX_NUM: usize> Default for ZkProverCircuit<Fp, TX_NUM> {
+    fn default() -> Self {
+        let mut buffer = Vec::new();
+        let mut f = File::open("src/ERC4337/rpc_data_test.json").unwrap();
+        f.read_to_end(&mut buffer).unwrap();
+        // println!("buffer {buffer:?}");
+
+        let rpc_txs = serde_json::from_slice::<BundlerRpcData>(&buffer)
+            .unwrap()
+            .result
+            .unwrap()
+            .tx_list;
+
+        const TX_NUM: usize = 2;
+        let k = 7;
+
+        let mock_element_list = vec![
+            Value::known(Fp::from(1)),
+            Value::known(Fp::from(2)),
+            Value::known(Fp::from(3)),
+            Value::known(Fp::from(4)),
+            Value::known(Fp::from(5)),
+        ];
+        let mock_zero = Value::known(Fp::from(0));
+        let mock_hashes_sum = Value::known(Fp::from(15));
 
         Self {
-            mpt_root_before: todo!(),
-            mpt_root_after: todo!(),
-            txs: todo!(),
-            chain_id: todo!(),
-            hash_sum_chip: todo!(),
-            mock_hashes_element: todo!(),
-            mock_hashes_sum: todo!(),
-            mock_zero: todo!(),
+            mpt_root_before: Fp::from(0),
+            mpt_root_after: Fp::from(0),
+            txs: rpc_txs.iter().map(|tr| tr.try_into().unwrap()).collect(),
+            chain_id: 5u64,
+            hash_sum_chip: SumChip {
+                _marker: PhantomData::default(),
+            },
+            mock_hashes_element: mock_element_list,
+            mock_hashes_sum,
+            mock_zero,
+        }
+    }
+}
+
+impl<Fp: FieldExt, const TX_NUM: usize> ZkProverCircuit<Fp, TX_NUM> {
+    // Constructs a new ZkProverCircuit
+
+    pub fn random() -> Self {
+        let mut buffer = Vec::new();
+        let mut f = File::open("src/ERC4337/rpc_data_test.json").unwrap();
+        f.read_to_end(&mut buffer).unwrap();
+        // println!("buffer {buffer:?}");
+
+        let rpc_txs = serde_json::from_slice::<BundlerRpcData>(&buffer)
+            .unwrap()
+            .result
+            .unwrap()
+            .tx_list;
+
+        const TX_NUM: usize = 2;
+        let k = 7;
+
+        let mock_element_list = vec![
+            Value::known(Fp::from(1)),
+            Value::known(Fp::from(2)),
+            Value::known(Fp::from(3)),
+            Value::known(Fp::from(4)),
+            Value::known(Fp::from(5)),
+        ];
+        let mock_zero = Value::known(Fp::from(0));
+        let mock_hashes_sum = Value::known(Fp::from(15));
+
+        Self {
+            mpt_root_before: Fp::from(0),
+            mpt_root_after: Fp::from(0),
+            txs: rpc_txs.iter().map(|tr| tr.try_into().unwrap()).collect(),
+            chain_id: 5u64,
+            hash_sum_chip: SumChip {
+                _marker: PhantomData::default(),
+            },
+            mock_hashes_element: mock_element_list,
+            mock_hashes_sum,
+            mock_zero,
         }
     }
 }
@@ -188,7 +263,7 @@ mod tests {
     use crate::{
         gadgets::hashes_sum::SumChip,
         test_utils::Fp,
-        verifier::{evm_verify, gen_evm_verifier},
+        verifier::{evm_verify, gen_evm_verifier}, zkprover_circuit::MOCK_RPC_TXS,
     };
     use halo2_proofs::{
         circuit::Value,
@@ -216,9 +291,9 @@ mod tests {
         f.read_to_end(&mut buffer).unwrap();
         // println!("buffer {buffer:?}");
 
-        let rpc_txs = serde_json::from_slice::<BundlerRpcData>(&buffer)
-            .unwrap()
+        let rpc_txs = MOCK_RPC_TXS.clone()
             .result
+            .unwrap()
             .tx_list;
 
         const TX_NUM: usize = 2;

@@ -74,7 +74,7 @@ pub struct BundlerRpcTxData {
 #[serde(rename_all(deserialize = "camelCase", serialize = "camelCase"))]
 pub struct BundlerRpcData {
     pub jsonrpc: String,
-    pub result: BundlerRpcResult,
+    pub result: Option<BundlerRpcResult>,
     pub id: u64,
 }
 
@@ -333,6 +333,7 @@ mod tests {
         let rpc_txs = serde_json::from_slice::<BundlerRpcData>(&buffer)
             .unwrap()
             .result
+            .unwrap()
             .tx_list;
 
         let txs: Vec<Transaction> = rpc_txs.iter().map(|tr| tr.try_into().unwrap()).collect();

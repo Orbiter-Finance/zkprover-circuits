@@ -105,7 +105,7 @@ pub fn gen_evm_verifier(
 
 pub fn evm_verify(deployment_code: Vec<u8>, instances: Vec<Vec<Fr>>, proof: Vec<u8>) {
     let calldata = encode_calldata(&instances, &proof);
-    println!("proof calldata: {:?}", calldata);
+    // println!("proof calldata: {:?}", calldata);
     let mut evm = ExecutorBuilder::default()
         .with_gas_limit(u64::MAX.into())
         .build();
