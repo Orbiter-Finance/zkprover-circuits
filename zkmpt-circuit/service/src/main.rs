@@ -2,7 +2,6 @@ use rocksdb::{DBVector, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use sparse_merkle_tree::{blake2b::Blake2bHasher, traits::Value, SparseMerkleTree, H256};
-use std::env;
 use std::time::Duration;
 use tokio::{task, time};
 use zkprover_mpt_circuits::{
@@ -10,7 +9,9 @@ use zkprover_mpt_circuits::{
     ERC4337::bundler::BundlerRpcData,
 };
 
+use dotenv::dotenv;
 use reqwest::Error;
+use std::env;
 
 /// pull the mission from bundler rpc service
 pub async fn pull_bundler_mission() {
@@ -28,16 +29,20 @@ pub async fn push_zkp_result(task_id: u64) {
     println!("push zkp result");
 }
 
-/// cargo run --package zkprover-mpt-circuits --bin service --
-/// /tmp/smt-store-dir
+/*
+cargo run --package zkprover-mpt-circuits --bin service -- /tmp/smt-store-dir /tmp/zk-setup
+ */
 #[tokio::main]
 pub async fn main() {
-    let args: Vec<String> = env::args().collect();
-    let db_path = args.get(1).expect("args db_path not found");
-    println!("db_path {:?}", db_path);
-    // futures::future::pending().await
+    dotenv().ok();
+    let setup_path = env::var("SETUP_PATH").unwrap();
+    let db_path = env::var("DB_PATH").unwrap();
+    // let setup_path = "/data/setup";
+    // let db_path = "/data/rocksdb/";
+    println!("SETUP_PATH {:?}", setup_path);
+    println!("DB_PATH {:?}", db_path);
 
-    let mut manager = Manager::new();
+    let mut manager = Manager::new(setup_path.to_string());
 
     let forever = task::spawn(async move {
         let mut interval = time::interval(Duration::from_millis(3000));

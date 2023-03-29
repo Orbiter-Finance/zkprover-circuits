@@ -130,7 +130,7 @@ impl<Fp: FieldExt, const TX_NUM: usize> ZkProverCircuit<Fp, TX_NUM> {
 
     pub fn random() -> Self {
         let mut buffer = Vec::new();
-        let mut f = File::open("src/ERC4337/rpc_data_test.json").unwrap();
+        let mut f = File::open("zkmpt-circuit/src/ERC4337/rpc_data_test.json").unwrap();
         f.read_to_end(&mut buffer).unwrap();
         // println!("buffer {buffer:?}");
 
@@ -263,7 +263,8 @@ mod tests {
     use crate::{
         gadgets::hashes_sum::SumChip,
         test_utils::Fp,
-        verifier::{evm_verify, gen_evm_verifier}, zkprover_circuit::MOCK_RPC_TXS,
+        verifier::{evm_verify, gen_evm_verifier},
+        zkprover_circuit::MOCK_RPC_TXS,
     };
     use halo2_proofs::{
         circuit::Value,
@@ -291,10 +292,7 @@ mod tests {
         f.read_to_end(&mut buffer).unwrap();
         // println!("buffer {buffer:?}");
 
-        let rpc_txs = MOCK_RPC_TXS.clone()
-            .result
-            .unwrap()
-            .tx_list;
+        let rpc_txs = MOCK_RPC_TXS.clone().result.unwrap().tx_list;
 
         const TX_NUM: usize = 2;
         let k = 7;

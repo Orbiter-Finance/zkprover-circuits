@@ -90,8 +90,8 @@ pub struct Manager {
 }
 
 impl Manager {
-    pub fn new() -> Self {
-        let mut folder = Path::new("output/").to_path_buf();
+    pub fn new(param_path: String) -> Self {
+        let mut folder = Path::new(&param_path).to_path_buf();
         let params = load_target_circuit_params::<Bn256, IntergrateCircuit>(&mut folder);
         let vk = load_target_circuit_vk::<Bn256, IntergrateCircuit>(&mut folder, &params);
         let zkprover = ZkProverCircuit::<Bn256Fr, 1>::random();

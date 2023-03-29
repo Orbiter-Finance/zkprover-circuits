@@ -1,0 +1,16 @@
+version: "0.1"
+
+networks:
+  # Specify the network for bridging
+  zkprover-circuit:
+    driver: bridge
+
+services:
+  circuit:
+    build: ./
+    command: ./target/release/service
+    env_file:
+      - .env
+    restart: always
+    networks:
+        - zkprover-bundler

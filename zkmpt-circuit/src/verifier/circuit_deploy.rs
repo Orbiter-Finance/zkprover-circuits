@@ -8,8 +8,6 @@ use halo2_proofs::{
 
 use rand::{rngs::OsRng, RngCore};
 
-use std::env::current_dir;
-use std::io::Write;
 use std::{
     fmt::Debug,
     io::{Cursor, Read},
