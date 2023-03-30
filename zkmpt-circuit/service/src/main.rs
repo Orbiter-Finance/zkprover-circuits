@@ -1,11 +1,13 @@
-use rocksdb::{DBVector, OptimisticTransactionDB};
+// use rocksdb::{DBVector, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
-use sparse_merkle_tree::{blake2b::Blake2bHasher, traits::Value, SparseMerkleTree, H256};
+// use sparse_merkle_tree::{blake2b::Blake2bHasher, traits::Value,
+// SparseMerkleTree, H256};
 use std::time::Duration;
 use tokio::{task, time};
 use zkprover_mpt_circuits::{
-    manager::Manager, smt_rocksdb_store::default_store::DefaultStore,
+    manager::Manager,
+    // smt_rocksdb_store::default_store::DefaultStore,
     ERC4337::bundler::BundlerRpcData,
 };
 
