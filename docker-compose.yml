@@ -13,5 +13,5 @@ services:
     networks:
         - zkprover-circuit
     volumes:
-      - .data/rocksdb:/data/bundler-circuit/rocksdb/
-      - .data/setup:/data/bundler-circuit/setup/
+      - .data/rocksdb:/data/rocksdb/
+      - .data/setup:/data/setup/

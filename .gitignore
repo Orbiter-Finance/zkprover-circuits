@@ -20,3 +20,4 @@ yarn.lock
 output_proof.json
 zkpVerifier.yul
 output/
+.data
