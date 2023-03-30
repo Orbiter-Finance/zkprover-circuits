@@ -25,6 +25,9 @@ RUN set -eux; \
     rm rustup-init; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME;
 
+RUN mkdir -p /data/rocksdb ; \
+    mkdir -p /data/setup 
+
 ARG RUSTFLAGS="-C target-feature=-crt-static"
 
 WORKDIR /app
