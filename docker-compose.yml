@@ -2,16 +2,18 @@ version: "0.1"
 
 networks:
   # Specify the network for bridging
-  zkprover-circuit:
+  zkprover-bundler_zkprover-bundler:
     driver: bridge
+    external: true
 
 services:
   circuit:
     build: ./
     command: ./target/release/service
+    # command: sleep 3000
     restart: always
     networks:
-        - zkprover-circuit
+        - zkprover-bundler_zkprover-bundler
     volumes:
       - .data/rocksdb:/data/rocksdb/
       - .data/setup:/data/setup/

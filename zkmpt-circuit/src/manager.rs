@@ -90,7 +90,7 @@ pub struct Manager {
 }
 
 impl Manager {
-    pub fn new(param_path: String) -> Self {
+    pub fn new(param_path: String, rpc_url: String) -> Self {
         let mut folder = Path::new(&param_path).to_path_buf();
         let params = load_target_circuit_params::<Bn256, IntergrateCircuit>(&mut folder);
         let vk = load_target_circuit_vk::<Bn256, IntergrateCircuit>(&mut folder, &params);
@@ -98,7 +98,7 @@ impl Manager {
 
         let pk = keygen(&params, zkprover).unwrap();
         let deployment_code = gen_evm_verifier(&params, pk.get_vk(), vec![1]);
-        let rpc_client = BundlerRpcClient::new("http://127.0.0.1:4337".to_owned());
+        let rpc_client = BundlerRpcClient::new(rpc_url);
         Manager {
             params,
             proving_key: pk,
