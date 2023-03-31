@@ -298,7 +298,7 @@ mod tests {
     use crate::{
         gadgets::hashes_sum::SumChip,
         test_utils::Fp,
-        verifier::{evm_verify, gen_evm_verifier},
+        verifier::{evm_verify, gen_evm_verifier, halo2_verify::encode_calldata_json},
         zkprover_circuit::MOCK_RPC_TXS,
     };
     use halo2_proofs::{
@@ -355,7 +355,8 @@ mod tests {
             mock_zero,
         };
 
-        let prover = MockProver::<Fp>::run(k, &circuit, vec![vec![Fp::from(15)]]).unwrap();
+        let pub_inputs = vec![vec![Fp::from(15)]];
+        let prover = MockProver::<Fp>::run(k, &circuit, pub_inputs.clone()).unwrap();
         assert_eq!(prover.verify(), Ok(()));
 
         let mut folder = Path::new("output/").to_path_buf();
@@ -363,8 +364,10 @@ mod tests {
         let vk = load_target_circuit_vk::<Bn256, IntergrateCircuit>(&mut folder, &params);
         let pk = keygen(&params, circuit.clone()).unwrap();
         let deployment_code = gen_evm_verifier(&params, pk.get_vk(), vec![1]);
-        let proof_bytes = gen_proof(&params, &pk, circuit, vec![vec![Fp::from(15)]]);
-        evm_verify(deployment_code, vec![vec![Fp::from(15)]], proof_bytes);
+        let proof_bytes = gen_proof(&params, &pk, circuit, pub_inputs.clone());
+        evm_verify(deployment_code, vec![vec![Fp::from(15)]], proof_bytes.clone());
+
+        encode_calldata_json(&pub_inputs, &proof_bytes);
 
         // println!("proof_bytes {:?}", hex::encode(proof_bytes));
     }
