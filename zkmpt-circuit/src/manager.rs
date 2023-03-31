@@ -19,6 +19,7 @@ use crate::{
     zkprover_circuit::{IntergrateCircuit, ZkProverCircuit},
     ERC4337::bundler::{BundlerRpcData, BundlerRpcTxData},
 };
+use reqwest::header::HeaderMap;
 use reqwest::ClientBuilder;
 use reqwest::Error;
 use reqwest::{Client, Response};
@@ -42,6 +43,8 @@ impl BundlerRpcClient {
     }
 
     pub async fn pull_mission(&self) -> Result<Response, Error> {
+        let mut headers = HeaderMap::new();
+        headers.insert("Content-Type", "application/json".parse().unwrap());
         let mission_body = json!({
             "jsonrpc": "2.0",
             "method": "zkp_getPoolBatch",
@@ -63,6 +66,8 @@ impl BundlerRpcClient {
         zk_proof: Bytes,
         zk_pub_inputs: Vec<U256>,
     ) -> Result<Response, Error> {
+        let mut headers = HeaderMap::new();
+        headers.insert("Content-Type", "application/json".parse().unwrap());
         let mission_body = json!({
             "jsonrpc": "2.0",
             "method": "zkp_sendProofAndPublicInput",
@@ -116,7 +121,8 @@ impl Manager {
                 return Err(e);
             }
         };
-        let bundler_rpc_data: BundlerRpcData = bundler_rpc_data.json().await.unwrap();
+        let bundler_rpc_data: BundlerRpcData =
+            bundler_rpc_data.json::<BundlerRpcData>().await.unwrap();
         // let bundler_rpc_data = MOCK_RPC_TXS.clone();
         let result = bundler_rpc_data.result;
         let task_id = bundler_rpc_data.id;

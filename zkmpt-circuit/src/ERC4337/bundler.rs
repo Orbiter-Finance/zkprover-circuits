@@ -63,10 +63,10 @@ pub struct BundlerRpcTxData {
     pub v: U64,
     pub r: U256,
     pub s: U256,
-    pub r#type: U256,
-    pub access_list: AccessList,
-    pub max_priority_fee_per_gas: Option<U256>,
-    pub max_fee_per_gas: Option<U256>,
+    // pub r#type: U256,
+    // pub access_list: AccessList,
+    // pub max_priority_fee_per_gas: Option<U256>,
+    // pub max_fee_per_gas: Option<U256>,
     pub chain_id: U64,
 }
 
@@ -107,16 +107,15 @@ pub struct Transaction {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gas_price: Option<Word>,
     /// Gas fee cap
-    pub gas_fee_cap: Option<Word>,
+    // pub gas_fee_cap: Option<Word>,
     /// Gas tip cap
-    pub gas_tip_cap: Option<Word>,
+    // pub gas_tip_cap: Option<Word>,
     /// The compiled code of a contract OR the first 4 bytes of the hash of the
     /// invoked method signature and encoded parameters. For details see
     /// Ethereum Contract ABI
     pub call_data: Bytes,
     /// Access list
-    pub access_list: AccessList,
-
+    // pub access_list: AccessList,
     pub chain_id: U64,
 
     /// "v" value of the transaction signature
@@ -199,55 +198,55 @@ impl Transaction {
     pub(crate) fn verify_sig(&self) -> Result<(), ()> {
         todo!()
     }
-    pub(crate) fn sign_1559_data(&self) -> Result<SignData, BundlerError> {
-        let sig_r_le = self.r.to_le_bytes();
-        let sig_s_le = self.s.to_le_bytes();
-        let chain_id = self.chain_id.as_u64();
-        let sig_r = ct_option_ok_or(
-            secp256k1::Fq::from_repr(sig_r_le),
-            BundlerError::Signature(libsecp256k1::Error::InvalidSignature),
-        )?;
-        let sig_s = ct_option_ok_or(
-            secp256k1::Fq::from_repr(sig_s_le),
-            BundlerError::Signature(libsecp256k1::Error::InvalidSignature),
-        )?;
-        // msg = rlp([nonce, gasPrice, gas, to, value, data, sig_v, r, s])
-        let req: Eip1559TransactionRequest = self.into();
-        println!("1559 REQ {:?}", &req);
-        let msg = req.chain_id(chain_id).rlp();
+    // pub(crate) fn sign_1559_data(&self) -> Result<SignData, BundlerError> {
+    //     let sig_r_le = self.r.to_le_bytes();
+    //     let sig_s_le = self.s.to_le_bytes();
+    //     let chain_id = self.chain_id.as_u64();
+    //     let sig_r = ct_option_ok_or(
+    //         secp256k1::Fq::from_repr(sig_r_le),
+    //         BundlerError::Signature(libsecp256k1::Error::InvalidSignature),
+    //     )?;
+    //     let sig_s = ct_option_ok_or(
+    //         secp256k1::Fq::from_repr(sig_s_le),
+    //         BundlerError::Signature(libsecp256k1::Error::InvalidSignature),
+    //     )?;
+    //     // msg = rlp([nonce, gasPrice, gas, to, value, data, sig_v, r, s])
+    //     let req: Eip1559TransactionRequest = self.into();
+    //     println!("1559 REQ {:?}", &req);
+    //     let msg = req.chain_id(chain_id).rlp();
 
-        println!("RLP Code === {:?}", &msg);
-        let msg_hash: [u8; 32] = Keccak256::digest(&msg)
-            .as_slice()
-            .to_vec()
-            .try_into()
-            .expect("hash length isn't 32 bytes");
+    //     println!("RLP Code === {:?}", &msg);
+    //     let msg_hash: [u8; 32] = Keccak256::digest(&msg)
+    //         .as_slice()
+    //         .to_vec()
+    //         .try_into()
+    //         .expect("hash length isn't 32 bytes");
 
-        println!("RLP Hash ==== {:?}", hex::encode(&msg_hash));
+    //     println!("RLP Hash ==== {:?}", hex::encode(&msg_hash));
 
-        // let v = self
-        //     .v
-        //     .checked_sub(35 + chain_id * 2)
-        //     .ok_or(BundlerError::Signature(
-        //         libsecp256k1::Error::InvalidSignature,
-        //     ))? as u8;
-        let v = self.v as u8;
-        let pk = recover_pk(self.from, v, &self.r, &self.s, &msg_hash).unwrap();
-        // msg_hash = msg_hash % q
-        let msg_hash = BigUint::from_bytes_be(msg_hash.as_slice());
-        let msg_hash = msg_hash.mod_floor(&*SECP256K1_Q);
-        let msg_hash_le = biguint_to_32bytes_le(msg_hash);
-        let msg_hash = ct_option_ok_or(
-            secp256k1::Fq::from_repr(msg_hash_le),
-            libsecp256k1::Error::InvalidMessage,
-        )
-        .unwrap();
-        Ok(SignData {
-            signature: (sig_r, sig_s),
-            pk,
-            msg_hash,
-        })
-    }
+    //     // let v = self
+    //     //     .v
+    //     //     .checked_sub(35 + chain_id * 2)
+    //     //     .ok_or(BundlerError::Signature(
+    //     //         libsecp256k1::Error::InvalidSignature,
+    //     //     ))? as u8;
+    //     let v = self.v as u8;
+    //     let pk = recover_pk(self.from, v, &self.r, &self.s, &msg_hash).unwrap();
+    //     // msg_hash = msg_hash % q
+    //     let msg_hash = BigUint::from_bytes_be(msg_hash.as_slice());
+    //     let msg_hash = msg_hash.mod_floor(&*SECP256K1_Q);
+    //     let msg_hash_le = biguint_to_32bytes_le(msg_hash);
+    //     let msg_hash = ct_option_ok_or(
+    //         secp256k1::Fq::from_repr(msg_hash_le),
+    //         libsecp256k1::Error::InvalidMessage,
+    //     )
+    //     .unwrap();
+    //     Ok(SignData {
+    //         signature: (sig_r, sig_s),
+    //         pk,
+    //         msg_hash,
+    //     })
+    // }
     pub(crate) fn sign_data(&self) -> Result<SignData, BundlerError> {
         let chain_id = self.chain_id.as_u64();
         let sig_r_le = self.r.to_le_bytes();
@@ -303,10 +302,10 @@ impl<'d> TryFrom<&'d BundlerRpcTxData> for Transaction {
             gas_limit: value.gas.clone(),
             value: value.value.clone(),
             gas_price: value.gas_price.clone(),
-            gas_fee_cap: value.max_fee_per_gas.clone(),
-            gas_tip_cap: value.max_priority_fee_per_gas.clone(),
+            // gas_fee_cap: value.max_fee_per_gas.clone(),
+            // gas_tip_cap: value.max_priority_fee_per_gas.clone(),
             call_data: value.input.clone(),
-            access_list: value.access_list.clone(),
+            // access_list: value.access_list.clone(),
             v: value.v.as_u64().clone(),
             r: value.r.clone(),
             s: value.s.clone(),
