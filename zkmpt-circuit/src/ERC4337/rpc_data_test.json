@@ -18,10 +18,6 @@
         "v": "0x2D",
         "r": "0x5fbe4bc25096bed5adbf6470de6dee5788adbc5c2d563cacf5997f74323cfa03",
         "s": "0x1a04acd7c50cb5866efd1ce6dfb5a6e1b59787e0ebd55ce22bad78ea809d4441",
-        "type": "0x0",
-        "accessList": [],
-        "maxPriorityFeePerGas": null,
-        "maxFeePerGas": null,
         "chainId": "0x5"
       }
     ],

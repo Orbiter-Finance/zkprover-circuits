@@ -121,8 +121,14 @@ impl Manager {
                 return Err(e);
             }
         };
-        let bundler_rpc_data: BundlerRpcData =
-            bundler_rpc_data.json::<BundlerRpcData>().await.unwrap();
+        let bundler_rpc_data_result = bundler_rpc_data.json::<BundlerRpcData>().await;
+        let bundler_rpc_data = match bundler_rpc_data_result {
+            Ok(m) => m,
+            Err(e) => {
+                eprintln!("rpc bundler Error : {}", e);
+                return Err(e);
+            }
+        };
         // let bundler_rpc_data = MOCK_RPC_TXS.clone();
         let result = bundler_rpc_data.result;
         let task_id = bundler_rpc_data.id;
