@@ -3,12 +3,10 @@
 // };
 
 use ethers::{
-    core::types::{
-        transaction::eip1559::Eip1559TransactionRequest, transaction::eip2930::AccessList, Address,
-        Block, Bytes, Signature, TxHash, H160, H256, U256, U64,
-    },
+    abi,
+    abi::ParamType,
+    core::types::{Address, Bytes, TxHash, U256, U64},
     types::TransactionRequest,
-    utils::keccak256,
 };
 
 use lazy_static::lazy_static;
@@ -19,25 +17,23 @@ use halo2_proofs::halo2curves::{
 };
 use num::Integer;
 use num_bigint::BigUint;
-use serde::{
-    de::{Deserializer, Error},
-    ser::Serializer,
-    Deserialize, Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     gadgets::{ToBigEndian, ToLittleEndian},
-    serde::Hash,
     ERC4337::geth_types::Error as BundlerError,
 };
-use itertools::Itertools;
 use snark_verifier::util::{
     arithmetic::PrimeField,
     hash::{Digest, Keccak256},
 };
 use subtle::CtOption;
 
+use crate::ERC4337::user_op::UserOperation;
+
 use crate::{gadgets::sign_verify::SignData, operation::TraceError};
+
+use hex_literal::hex;
 
 lazy_static! {
     /// Secp256k1 Curve Scalar.  Referece: Section 2.4.1 (parameter `n`) in "SEC 2: Recommended
@@ -113,7 +109,7 @@ pub struct Transaction {
     /// The compiled code of a contract OR the first 4 bytes of the hash of the
     /// invoked method signature and encoded parameters. For details see
     /// Ethereum Contract ABI
-    pub call_data: Bytes,
+    pub input: Bytes,
     /// Access list
     // pub access_list: AccessList,
     pub chain_id: U64,
@@ -198,55 +194,57 @@ impl Transaction {
     pub(crate) fn verify_sig(&self) -> Result<(), ()> {
         todo!()
     }
-    // pub(crate) fn sign_1559_data(&self) -> Result<SignData, BundlerError> {
-    //     let sig_r_le = self.r.to_le_bytes();
-    //     let sig_s_le = self.s.to_le_bytes();
-    //     let chain_id = self.chain_id.as_u64();
-    //     let sig_r = ct_option_ok_or(
-    //         secp256k1::Fq::from_repr(sig_r_le),
-    //         BundlerError::Signature(libsecp256k1::Error::InvalidSignature),
-    //     )?;
-    //     let sig_s = ct_option_ok_or(
-    //         secp256k1::Fq::from_repr(sig_s_le),
-    //         BundlerError::Signature(libsecp256k1::Error::InvalidSignature),
-    //     )?;
-    //     // msg = rlp([nonce, gasPrice, gas, to, value, data, sig_v, r, s])
-    //     let req: Eip1559TransactionRequest = self.into();
-    //     println!("1559 REQ {:?}", &req);
-    //     let msg = req.chain_id(chain_id).rlp();
 
-    //     println!("RLP Code === {:?}", &msg);
-    //     let msg_hash: [u8; 32] = Keccak256::digest(&msg)
-    //         .as_slice()
-    //         .to_vec()
-    //         .try_into()
-    //         .expect("hash length isn't 32 bytes");
+    pub(crate) fn get_4337_user_op(&self) -> Result<(Vec<UserOperation>), ()> {
+        let call_data = self.input.clone();
+        let mut ops: Vec<UserOperation> = vec![];
+        let (_, decoded_input_data) = call_data.split_at(4);
+        let tokens = abi::decode(
+            &[
+                ParamType::Array(Box::new(ParamType::Tuple(vec![
+                    ParamType::Address,
+                    ParamType::Uint(256),
+                    ParamType::Bytes,
+                    ParamType::Bytes,
+                    ParamType::Uint(256),
+                    ParamType::Uint(256),
+                    ParamType::Uint(256),
+                    ParamType::Uint(256),
+                    ParamType::Uint(256),
+                    ParamType::Bytes,
+                    ParamType::Bytes,
+                ]))),
+                ParamType::Bytes,
+                ParamType::FixedArray(Box::new(ParamType::Uint(256)), 1),
+                ParamType::Address,
+            ],
+            &decoded_input_data,
+        )
+        .unwrap();
 
-    //     println!("RLP Hash ==== {:?}", hex::encode(&msg_hash));
+        println!("tokens {:?}", tokens);
 
-    //     // let v = self
-    //     //     .v
-    //     //     .checked_sub(35 + chain_id * 2)
-    //     //     .ok_or(BundlerError::Signature(
-    //     //         libsecp256k1::Error::InvalidSignature,
-    //     //     ))? as u8;
-    //     let v = self.v as u8;
-    //     let pk = recover_pk(self.from, v, &self.r, &self.s, &msg_hash).unwrap();
-    //     // msg_hash = msg_hash % q
-    //     let msg_hash = BigUint::from_bytes_be(msg_hash.as_slice());
-    //     let msg_hash = msg_hash.mod_floor(&*SECP256K1_Q);
-    //     let msg_hash_le = biguint_to_32bytes_le(msg_hash);
-    //     let msg_hash = ct_option_ok_or(
-    //         secp256k1::Fq::from_repr(msg_hash_le),
-    //         libsecp256k1::Error::InvalidMessage,
-    //     )
-    //     .unwrap();
-    //     Ok(SignData {
-    //         signature: (sig_r, sig_s),
-    //         pk,
-    //         msg_hash,
-    //     })
-    // }
+        let tuple_arr = tokens[0].clone().into_array().unwrap();
+
+        for tuple in tuple_arr.iter() {
+            let t = tuple.clone().into_tuple().unwrap();
+            ops.push(UserOperation {
+                sender: t[0].clone().into_address().unwrap(),
+                nonce: t[1].clone().into_uint().unwrap(),
+                init_code: Bytes::from(t[2].clone().into_bytes().unwrap()),
+                call_data: Bytes::from(t[3].clone().into_bytes().unwrap()),
+                call_gas_limit: t[4].clone().into_uint().unwrap(),
+                verification_gas_limit: t[5].clone().into_uint().unwrap(),
+                pre_verification_gas: t[6].clone().into_uint().unwrap(),
+                max_fee_per_gas: t[7].clone().into_uint().unwrap(),
+                max_priority_fee_per_gas: t[8].clone().into_uint().unwrap(),
+                paymaster_and_data: Bytes::from(t[9].clone().into_bytes().unwrap()),
+                signature: Bytes::from(t[10].clone().into_bytes().unwrap()),
+            });
+        };
+        Ok(ops)
+    }
+
     pub(crate) fn sign_data(&self) -> Result<SignData, BundlerError> {
         let chain_id = self.chain_id.as_u64();
         let sig_r_le = self.r.to_le_bytes();
@@ -286,6 +284,7 @@ impl Transaction {
         Ok(SignData {
             signature: (sig_r, sig_s),
             pk,
+            msg,
             msg_hash,
         })
     }
@@ -304,7 +303,7 @@ impl<'d> TryFrom<&'d BundlerRpcTxData> for Transaction {
             gas_price: value.gas_price.clone(),
             // gas_fee_cap: value.max_fee_per_gas.clone(),
             // gas_tip_cap: value.max_priority_fee_per_gas.clone(),
-            call_data: value.input.clone(),
+            input: value.input.clone(),
             // access_list: value.access_list.clone(),
             v: value.v.as_u64().clone(),
             r: value.r.clone(),
@@ -336,7 +335,9 @@ mod tests {
             .tx_list;
 
         let txs: Vec<Transaction> = rpc_txs.iter().map(|tr| tr.try_into().unwrap()).collect();
-        println!("txs ${:?}", txs);
+        // println!("txs ${:?}", txs);
+        let user_ops = txs[0].get_4337_user_op().unwrap();
+        println!("{:?}", serde_json::to_string(&user_ops).unwrap());
         // txs.iter()
         //     .map(|tx| {
         //         tx.sign_1559_data(4337).map_err(|e| {

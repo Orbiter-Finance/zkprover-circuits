@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use ethers::types::Bytes;
 use halo2_proofs::{
     circuit::Layouter,
     halo2curves::{
@@ -22,8 +23,13 @@ pub(crate) fn pk_bytes_swap_endianness<T: Clone>(pk: &[T]) -> [T; 64] {
 
 #[derive(Clone, Debug)]
 pub(crate) struct SignData {
+    /// Secp256k1 signature point
     pub(crate) signature: (secp256k1::Fq, secp256k1::Fq),
+    /// Secp256k1 public key
     pub(crate) pk: Secp256k1Affine,
+     /// Message being hashed before signing.
+    pub(crate )msg: Bytes,
+    /// Hash of the message that is being signed
     pub(crate) msg_hash: secp256k1::Fq,
 }
 

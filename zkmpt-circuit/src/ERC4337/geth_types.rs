@@ -48,7 +48,7 @@ impl From<&Transaction> for TransactionRequest {
             gas: Some(tx.gas_limit),
             gas_price: tx.gas_price,
             value: Some(tx.value),
-            data: Some(tx.call_data.clone()),
+            data: Some(tx.input.clone()),
             nonce: Some(tx.nonce),
             ..Default::default()
         }

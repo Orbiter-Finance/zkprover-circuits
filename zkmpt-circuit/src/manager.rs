@@ -131,6 +131,7 @@ impl Manager {
         };
         // let bundler_rpc_data = MOCK_RPC_TXS.clone();
         let result = bundler_rpc_data.result;
+
         let task_id = bundler_rpc_data.id;
         let result_data = match result {
             Some(result) => result,
@@ -139,6 +140,11 @@ impl Manager {
                 return Ok(());
             }
         };
+
+        println!(
+            "mission result {}",
+            serde_json::to_string(&result_data).unwrap()
+        );
         let batch_hash = result_data.batch_hash;
         let tx_list = result_data.tx_list;
         let status = result_data.status;
