@@ -6,12 +6,14 @@ pub mod gas_ticket;
 pub mod hash_poseidon;
 pub mod hash_util;
 pub mod hashes_sum;
+pub mod table;
 pub mod kv_util;
 pub mod layer;
 pub mod mpt;
 pub mod padding;
 pub mod poseidon_hash;
 pub mod sign_verify;
+pub mod sign_util;
 pub mod table_util;
 
 /// Trait used to convert a scalar value to a 32 byte array in little endian.

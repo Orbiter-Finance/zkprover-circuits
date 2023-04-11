@@ -31,7 +31,8 @@ use subtle::CtOption;
 
 use crate::ERC4337::user_op::UserOperation;
 
-use crate::{gadgets::sign_verify::SignData, operation::TraceError};
+use crate::operation::TraceError;
+use eth_types::sign_types::SignData;
 
 use hex_literal::hex;
 
@@ -241,7 +242,7 @@ impl Transaction {
                 paymaster_and_data: Bytes::from(t[9].clone().into_bytes().unwrap()),
                 signature: Bytes::from(t[10].clone().into_bytes().unwrap()),
             });
-        };
+        }
         Ok(ops)
     }
 
@@ -284,7 +285,6 @@ impl Transaction {
         Ok(SignData {
             signature: (sig_r, sig_s),
             pk,
-            msg,
             msg_hash,
         })
     }

@@ -12,10 +12,14 @@ halo2_gadgets = { git = "https://github.com/privacy-scaling-explorations/halo2",
 ecdsa = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_02_02" }
 ecc = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_02_02" }
 maingate = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_02_02" }
+integer = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_02_02" }
 
 k256 = { git = "https://github.com/RustCrypto/elliptic-curves.git", tag = "k256/v0.13.0"}
 libsecp256k1 = "0.7"
 # reth-db = { git = "https://github.com/paradigmxyz/reth.git", rev = "314ea0883b1062375ad86577be1fccc39233739d" }
+
+eth-types = { path = "../eth-types" }
+keccak256 = { path = "../keccak256" }
 
 rand = "0.8"
 lazy_static = "1.4.0"
@@ -35,6 +39,9 @@ rustc-hex = "^2.0.1"
 prost = "0.11"
 subtle = "2.4"
 num = "0.4.0"
+rand_chacha = "0.3"
+log = "0.4"
+rand_xorshift = "0.3"
 
 tokio = { version = "1.26.0", features = ["full"] }
 reqwest = { version = "0.11.16", features = ["json"]}

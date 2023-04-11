@@ -75,9 +75,10 @@ impl AsMut<[u8]> for Serialized {
 }
 
 use crate::{
-    gadgets::sign_verify::SignData, verifier::circuit_deploy::TargetCircuit,
+    verifier::circuit_deploy::TargetCircuit,
     ERC4337::bundler::Transaction,
 };
+use eth_types::sign_types::SignData;
 
 // entry point
 #[derive(Clone, Debug)]
