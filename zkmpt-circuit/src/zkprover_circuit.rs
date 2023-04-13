@@ -2,12 +2,13 @@ use std::{fs::File, io::Read, marker::PhantomData, str::FromStr};
 
 use ethers::types::H256;
 use halo2_proofs::{
-    arithmetic::FieldExt,
     circuit::{Layouter, SimpleFloorPlanner, Value},
     halo2curves::pairing::MultiMillerLoop,
     plonk::{Circuit, ConstraintSystem, Error},
 };
 use itertools::Itertools;
+
+use eth_types::Field;
 
 use jsonrpsee::tracing::log::error;
 use std::fmt::Debug;
@@ -74,21 +75,18 @@ impl AsMut<[u8]> for Serialized {
     }
 }
 
-use crate::{
-    verifier::circuit_deploy::TargetCircuit,
-    ERC4337::bundler::Transaction,
-};
+use crate::{verifier::circuit_deploy::TargetCircuit, ERC4337::bundler::Transaction};
 use eth_types::sign_types::SignData;
 
 // entry point
 #[derive(Clone, Debug)]
-pub struct ZkProverCircuitConfig<Fp: FieldExt> {
+pub struct ZkProverCircuitConfig<Fp: Field> {
     sum_config: SumConfig<Fp>,
     // sign_verify_config: SignVerifyConfig<Fp>,
     _marker: PhantomData<Fp>,
 }
 
-impl<Fp: FieldExt> ZkProverCircuitConfig<Fp> {
+impl<Fp: Field> ZkProverCircuitConfig<Fp> {
     pub fn new(meta: &mut ConstraintSystem<Fp>) -> Self {
         let sum_config = SumChip::configure(meta);
         // let sign_veriy_config =
@@ -101,7 +99,7 @@ impl<Fp: FieldExt> ZkProverCircuitConfig<Fp> {
 }
 
 #[derive(Clone, Debug)]
-pub struct ZkProverCircuit<Fp: FieldExt, const TX_NUM: usize> {
+pub struct ZkProverCircuit<Fp: Field, const TX_NUM: usize> {
     // the maxium records in circuits (would affect vk)
     pub mpt_root_before: H256,
     pub mpt_root_after: H256,
@@ -119,7 +117,7 @@ pub struct ZkProverCircuit<Fp: FieldExt, const TX_NUM: usize> {
     pub mock_zero: Value<Fp>,
 }
 
-impl<Fp: FieldExt, const TX_NUM: usize> Default for ZkProverCircuit<Fp, TX_NUM> {
+impl<Fp: Field, const TX_NUM: usize> Default for ZkProverCircuit<Fp, TX_NUM> {
     fn default() -> Self {
         let rpc_txs = MOCK_RPC_TXS.clone().result.unwrap().tx_list;
 
@@ -151,7 +149,7 @@ impl<Fp: FieldExt, const TX_NUM: usize> Default for ZkProverCircuit<Fp, TX_NUM> 
     }
 }
 
-impl<Fp: FieldExt, const TX_NUM: usize> ZkProverCircuit<Fp, TX_NUM> {
+impl<Fp: Field, const TX_NUM: usize> ZkProverCircuit<Fp, TX_NUM> {
     // Constructs a new ZkProverCircuit
 
     pub fn random() -> Self {
@@ -220,7 +218,7 @@ impl<Fp: FieldExt, const TX_NUM: usize> ZkProverCircuit<Fp, TX_NUM> {
     }
 }
 
-impl<Fp: FieldExt, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_NUM> {
+impl<Fp: Field, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_NUM> {
     type Config = ZkProverCircuitConfig<Fp>;
 
     type FloorPlanner = SimpleFloorPlanner;
@@ -277,34 +275,13 @@ impl<Fp: FieldExt, const TX_NUM: usize> Circuit<Fp> for ZkProverCircuit<Fp, TX_N
 
 pub struct IntergrateCircuit;
 
-impl<E: MultiMillerLoop> TargetCircuit<E> for IntergrateCircuit {
+impl TargetCircuit for IntergrateCircuit {
     const TARGET_CIRCUIT_K: u32 = 10;
     const PUBLIC_INPUT_SIZE: usize = 1;
     const N_PROOFS: usize = 2;
     const NAME: &'static str = "zkProver_circuit";
     const PARAMS_NAME: &'static str = "zkProver_circuit";
     const READABLE_VKEY: bool = true;
-
-    type Circuit = ZkProverCircuit<E::Scalar, 128>;
-
-    fn instance_builder() -> (Self::Circuit, Vec<Vec<E::Scalar>>) {
-        let circuit = ZkProverCircuit {
-            mpt_root_before: todo!(),
-            mpt_root_after: todo!(),
-            txs: todo!(),
-            chain_id: todo!(),
-            hash_sum_chip: todo!(),
-            mock_hashes_element: todo!(),
-            mock_hashes_sum: todo!(),
-            mock_zero: todo!(),
-        };
-        let instances = vec![];
-        (circuit, instances)
-    }
-
-    fn load_instances(buf: &[u8]) -> Vec<Vec<Vec<E::Scalar>>> {
-        vec![vec![]]
-    }
 }
 
 #[cfg(test)]
@@ -315,7 +292,10 @@ mod tests {
     use crate::{
         gadgets::hashes_sum::SumChip,
         test_utils::Fp,
-        verifier::{evm_verify, gen_evm_verifier, halo2_verify::encode_calldata_json},
+        verifier::{
+            circuit_deploy::init_trusted_setup, evm_verify, gen_evm_verifier,
+            halo2_verify::encode_calldata_json,
+        },
         zkprover_circuit::MOCK_RPC_TXS,
     };
     use ethers::types::H256;
@@ -329,7 +309,7 @@ mod tests {
     use crate::{
         verifier::{
             circuit_deploy::{
-                keygen, load_target_circuit_params, load_target_circuit_vk, sample_circuit_setup,
+                keygen, load_target_circuit_params, load_target_circuit_vk,
                 TargetCircuit,
             },
             gen_proof,
@@ -376,8 +356,8 @@ mod tests {
         assert_eq!(prover.verify(), Ok(()));
 
         let mut folder = Path::new("output/").to_path_buf();
-        let params = load_target_circuit_params::<Bn256, IntergrateCircuit>(&mut folder);
-        let vk = load_target_circuit_vk::<Bn256, IntergrateCircuit>(&mut folder, &params);
+        let params = load_target_circuit_params::<IntergrateCircuit>(&mut folder);
+        let vk = load_target_circuit_vk::<IntergrateCircuit>(&mut folder, &params);
         let pk = keygen(&params, circuit.clone()).unwrap();
         let deployment_code = gen_evm_verifier(&params, pk.get_vk(), vec![1]);
         let proof_bytes = gen_proof(&params, &pk, circuit, pub_inputs.clone());
@@ -394,7 +374,12 @@ mod tests {
 
     #[test]
     fn test_circuit_setup_data() {
-        sample_circuit_setup::<Bn256, IntergrateCircuit>("output/".into());
+        // sample_circuit_setup::<Bn256, IntergrateCircuit>("output/".into());
+        init_trusted_setup(
+            IntergrateCircuit::TARGET_CIRCUIT_K,
+            IntergrateCircuit::PARAMS_NAME,
+            "output/".into(),
+        );
     }
 
     #[test]

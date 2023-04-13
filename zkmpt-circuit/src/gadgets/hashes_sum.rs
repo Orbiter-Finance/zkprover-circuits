@@ -1,18 +1,19 @@
 use std::marker::PhantomData;
 
 use halo2_proofs::{
-    arithmetic::FieldExt,
     circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value},
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Expression, Instance, Selector},
-    poly::Rotation,
+    poly::Rotation
 };
 
+use eth_types::Field;
+
 #[derive(Clone)]
-pub struct Number<F: FieldExt>(AssignedCell<F, F>);
+pub struct Number<F: Field>(AssignedCell<F, F>);
 
 // Config that contains the columns used in the circuit
 #[derive(Debug, Clone)]
-pub struct SumConfig<F: FieldExt> {
+pub struct SumConfig<F: Field> {
     pre_sum: Column<Advice>,
     element: Column<Advice>,
     post_sum: Column<Advice>,
@@ -23,11 +24,11 @@ pub struct SumConfig<F: FieldExt> {
 
 // The chip that configures the gate and fills in the witness
 #[derive(Debug, Clone)]
-pub struct SumChip<F: FieldExt> {
+pub struct SumChip<F: Field> {
     pub _marker: PhantomData<F>,
 }
 
-impl<F: FieldExt> Default for SumChip<F> {
+impl<F: Field> Default for SumChip<F> {
     fn default() -> Self {
         Self {
             _marker: PhantomData::default(),
@@ -35,7 +36,7 @@ impl<F: FieldExt> Default for SumChip<F> {
     }
 }
 
-impl<F: FieldExt> SumChip<F> {
+impl<F: Field> SumChip<F> {
     fn construct() -> Self {
         Self {
             _marker: PhantomData,
@@ -200,7 +201,7 @@ mod tests {
 
     use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner};
     use halo2_proofs::dev::circuit_dot_graph;
-    use halo2_proofs::halo2curves::FieldExt;
+    use eth_types::Field;
     use halo2_proofs::plonk::{Circuit, ConstraintSystem, Error};
     use halo2_proofs::{circuit::Value, dev::MockProver, halo2curves::bn256::Fr as Fp};
     use num::Zero;
@@ -223,7 +224,7 @@ mod tests {
         // public_sum: Value<F>,
     }
 
-    impl<F: FieldExt> Circuit<F> for SumCircuit<F> {
+    impl<F: Field> Circuit<F> for SumCircuit<F> {
         type Config = SumConfig<F>;
         type FloorPlanner = SimpleFloorPlanner;
 
